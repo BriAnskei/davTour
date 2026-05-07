@@ -1,0 +1,133 @@
+@extends('layouts.admin')
+
+@section('title', 'Bookings')
+@section('page-title', 'All Bookings')
+@section('page-subtitle', 'Manage and track all tour reservations')
+
+@section('content')
+
+{{-- Filter Bar --}}
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="flex gap-2 flex-wrap">
+        @foreach(['all' => 'All', 'pending' => 'Pending', 'confirmed' => 'Confirmed', 'cancelled' => 'Cancelled'] as $val => $label)
+        <a href="{{ route('admin.bookings', ['status' => $val === 'all' ? null : $val]) }}"
+           class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
+               {{ (request('status', 'all') === $val || (!request('status') && $val === 'all')) ? 'text-white' : 'bg-white border border-slate2 text-gray-500 hover:bg-gray-50' }}"
+           style="{{ (request('status', 'all') === $val || (!request('status') && $val === 'all')) ? 'background:#1a3a2a;' : '' }}">
+            {{ $label }}
+            @if(isset($counts[$val]) && $val !== 'all')
+                <span class="ml-1 opacity-70">({{ $counts[$val] }})</span>
+            @endif
+        </a>
+        @endforeach
+    </div>
+
+    <form method="GET" action="{{ route('admin.bookings') }}" class="flex gap-2">
+        <input type="hidden" name="status" value="{{ request('status') }}">
+        <div class="relative">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search guest or tour..."
+                   class="pl-9 pr-4 py-2 rounded-xl border border-slate2 text-sm focus:outline-none focus:border-jungle-500 bg-white w-56">
+        </div>
+        <button type="submit" class="px-4 py-2 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-500 transition-colors">Search</button>
+    </form>
+</div>
+
+{{-- Bookings Table --}}
+<div class="bg-white rounded-2xl card-shine border border-slate2 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr style="background:#f5f1eb;" class="border-b border-slate2">
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">#</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Guest</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Tour</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Schedule Date</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Pax</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+                    <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Booked On</th>
+                    <th class="text-right px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate2">
+                @forelse($bookings as $booking)
+                <tr class="hover:bg-cream transition-colors">
+                    <td class="px-6 py-4 text-gray-400 text-xs">{{ $booking->id }}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
+                                 style="background:#2d6a4f;">
+                                {{ strtoupper(substr($booking->user->name ?? 'U', 0, 1)) }}
+                            </div>
+                            <div>
+                                <p class="font-semibold text-jungle-700 text-xs">{{ $booking->user->name ?? '—' }}</p>
+                                <p class="text-gray-400 text-xs">{{ $booking->user->email ?? '' }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="font-medium text-gray-700 text-xs">{{ $booking->tourSchedule->tour->name ?? '—' }}</p>
+                        <p class="text-gray-400 text-xs">{{ $booking->tourSchedule->tour->location ?? '' }}</p>
+                    </td>
+                    <td class="px-6 py-4 text-gray-600 text-xs font-medium">
+                        {{ isset($booking->tourSchedule->date) ? \Carbon\Carbon::parse($booking->tourSchedule->date)->format('M d, Y') : '—' }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-jungle-50 text-jungle-700">
+                            {{ $booking->p_count }} pax
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold
+                            {{ $booking->status === 'confirmed' ? 'bg-jungle-100 text-jungle-700' :
+                               ($booking->status === 'pending'   ? 'bg-amber-100 text-amber-500' :
+                               'bg-red-100 text-red-500') }}">
+                            {{ ucfirst($booking->status) }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-gray-400 text-xs">{{ $booking->created_at->format('M d, Y') }}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-end gap-1">
+                            {{-- Quick status update --}}
+                            @if($booking->status === 'pending')
+                            <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="status" value="confirmed">
+                                <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-jungle-100 text-jungle-700 hover:bg-jungle-200 transition-colors">
+                                    Confirm
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
+                                @csrf @method('PATCH')
+                                <input type="hidden" name="status" value="cancelled">
+                                <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-400 hover:bg-red-100 transition-colors">
+                                    Cancel
+                                </button>
+                            </form>
+                            @else
+                            <span class="text-xs text-gray-300 italic">—</span>
+                            @endif
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="8" class="px-6 py-16 text-center">
+                        <div class="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center" style="background:#d6ece0;">
+                            <svg class="w-6 h-6" style="color:#1a3a2a;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        </div>
+                        <p class="text-gray-400 text-sm font-medium">No bookings found.</p>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    @if($bookings->hasPages())
+    <div class="px-6 py-4 border-t border-slate2">
+        {{ $bookings->withQueryString()->links() }}
+    </div>
+    @endif
+</div>
+@endsection
