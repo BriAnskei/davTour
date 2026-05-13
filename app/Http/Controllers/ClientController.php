@@ -20,7 +20,34 @@ class ClientController extends Controller
 
         $tours = $query->latest()->paginate(9);
 
-        return view('client.index', compact('tours'));
+        // Fetch popular tour images for the header carousel
+        // We first try to get tours with at least one booking, ordered by popularity
+        $popularTours = Tour::with('images')
+            ->where('status', 'active')
+            ->whereHas('bookings')
+            ->withCount('bookings')
+            ->orderBy('bookings_count', 'desc')
+            ->take(5)
+            ->get();
+
+        // If we don't have enough popular tours (e.g., brand new site), 
+        // fill the remaining slots or replace with random tours
+        if ($popularTours->count() < 5) {
+            $randomTours = Tour::with('images')
+                ->where('status', 'active')
+                ->whereNotIn('id', $popularTours->pluck('id'))
+                ->inRandomOrder()
+                ->take(5 - $popularTours->count())
+                ->get();
+            
+            $popularTours = $popularTours->concat($randomTours);
+        }
+
+        $carouselImages = $popularTours->map(function($tour) {
+            return $tour->images->first() ? asset('storage/' . $tour->images->first()->image) : null;
+        })->filter()->values();
+
+        return view('client.index', compact('tours', 'carouselImages'));
     }
 
     public function show($id)

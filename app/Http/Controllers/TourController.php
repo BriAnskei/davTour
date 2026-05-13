@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class TourController extends Controller
 {
@@ -21,8 +22,7 @@ class TourController extends Controller
         $query = Tour::with('images');
 
         if ($request->filled('search')) {
-            $q
-            uery->where('name', 'like', '%' . $request->search . '%')
+            $query->where('name', 'like', '%' . $request->search . '%')
                   ->orWhere('location', 'like', '%' . $request->search . '%');
         }
 
@@ -110,7 +110,11 @@ class TourController extends Controller
 
     } catch (\Exception $e) {
         DB::rollBack();
-        return back()->with('error', 'Something went wrong. Please try again.');
+        Log::error('Tour creation failed: ' . $e->getMessage(), [
+            'exception' => $e,
+            'request'   => $request->except('images_base64')
+        ]);
+        return back()->with('error', 'Something went wrong: ' . $e->getMessage());
     }
 }
 
@@ -139,13 +143,15 @@ class TourController extends Controller
         $tour = Tour::findOrFail($id);
 
         $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'location'    => 'required|string|max:255',
-            'price'       => 'required|numeric|min:0',
-            'status'      => 'required|in:active,inactive',
-            'images'      => 'nullable|array',
-            'images.*'    => 'image|mimes:jpeg,png,jpg|max:2048',
+            'name'           => 'required|string|max:255',
+            'description'    => 'nullable|string',
+            'location'       => 'required|string|max:255',
+            'price'          => 'required|numeric|min:0',
+            'status'         => 'required|in:active,inactive',
+            'remove_images'  => 'nullable|array',
+            'remove_images.*' => 'exists:tour_images,id',
+            'images'         => 'nullable|array',
+            'images.*'       => 'image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         DB::beginTransaction();
@@ -155,13 +161,20 @@ class TourController extends Controller
                 'name', 'description', 'location', 'price', 'status'
             ]));
 
-            // If new images are uploaded, replace existing ones
-            if ($request->hasFile('images')) {
-                foreach ($tour->images as $img) {
+            // 1. Remove marked images
+            if ($request->filled('remove_images')) {
+                $imagesToRemove = TourImage::whereIn('id', $request->remove_images)
+                    ->where('tour_id', $tour->id)
+                    ->get();
+
+                foreach ($imagesToRemove as $img) {
                     Storage::disk('public')->delete($img->image);
                     $img->delete();
                 }
+            }
 
+            // 2. Add new images
+            if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
                     $path = $file->store('tours', 'public');
                     TourImage::create([
@@ -176,7 +189,12 @@ class TourController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Something went wrong. Please try again.');
+            Log::error('Tour update failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'tour_id'   => $id,
+                'request'   => $request->except(['images'])
+            ]);
+            return back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
     }
 

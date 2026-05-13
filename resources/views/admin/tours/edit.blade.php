@@ -79,20 +79,35 @@
             <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
                 @foreach($tour->images as $img)
                 <div class="relative aspect-square rounded-xl overflow-hidden border border-slate2 group">
-                    <img src="{{ asset('storage/' . $img->image) }}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                        <form method="POST" action="{{ route('tour_images.destroy', $img->id) }}" class="opacity-0 group-hover:opacity-100">
-                            @csrf @method('DELETE')
-                            <button type="submit" onclick="return confirm('Remove this image?')"
-                                    class="w-8 h-8 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                            </button>
-                        </form>
-                    </div>
+                    <img src="{{ asset('storage/' . $img->image) }}" class="w-full h-full object-cover transition-all group-[.marked-for-removal]:opacity-30">
+                    
+                    {{-- The Checkbox Logic --}}
+                    <label class="absolute inset-0 cursor-pointer flex flex-col items-center justify-center p-2 text-center z-10">
+                        <input type="checkbox" name="remove_images[]" value="{{ $img->id }}" 
+                               class="peer hidden" 
+                               onchange="this.closest('.relative').classList.toggle('marked-for-removal', this.checked)">
+                        
+                        {{-- Hover Overlay (Default) --}}
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all peer-checked:bg-red-500/20"></div>
+
+                        {{-- Icon --}}
+                        <div class="relative w-8 h-8 rounded-full bg-white/20 border border-white/50 flex items-center justify-center text-white transition-all peer-checked:bg-red-500 peer-checked:border-red-500 hover:scale-110">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </div>
+                        
+                        <span class="relative text-[10px] font-bold text-white mt-1 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-wider peer-checked:opacity-100">
+                             Remove
+                        </span>
+                    </label>
+
+                    {{-- Red Border indicator when checked --}}
+                    <div class="absolute inset-0 border-4 border-red-500 opacity-0 pointer-events-none transition-opacity peer-checked:opacity-100 rounded-xl z-20"></div>
                 </div>
                 @endforeach
             </div>
-            <p class="text-xs text-gray-400 mt-3">⚠ Uploading new images below will replace all current images.</p>
+            <p class="text-xs text-gray-400 mt-3">Click any image to <span class="text-red-500 font-bold">Mark for Removal</span>. They will be deleted when you Save Changes.</p>
         </div>
         @endif
 

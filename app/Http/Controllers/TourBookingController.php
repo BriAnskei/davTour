@@ -25,6 +25,24 @@ class TourBookingController extends Controller
                 ->with('error', 'This schedule is fully booked.');
         }
 
+        // Conflict check: Has the user already booked another tour on this date?
+        $requestedDate = $schedule->date;
+        $conflict = TourBooking::where('user_id', Auth::id())
+            ->where('status', 'confirmed')
+            ->whereHas('tourSchedule', function($query) use ($requestedDate) {
+                $query->where('date', $requestedDate);
+            })
+            ->with('tourSchedule.tour')
+            ->first();
+
+        if ($conflict) {
+            return redirect()->route('client.show', $schedule->tour_id)
+                ->with('conflict_booking', [
+                    'date' => \Carbon\Carbon::parse($requestedDate)->format('M d, Y'),
+                    'tour_name' => $conflict->tourSchedule->tour->name
+                ]);
+        }
+
         return view('client.booking', compact('schedule', 'remaining'));
     }
 

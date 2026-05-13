@@ -28,6 +28,24 @@
         body { font-family: 'DM Sans', sans-serif; background: #faf6f0; }
         .card-shine { box-shadow: 0 1px 3px rgba(26,58,42,.08), 0 4px 16px rgba(26,58,42,.06); }
 
+        /* Carousel Styles */
+        .carousel-container { position: relative; overflow: hidden; }
+        .carousel-track { display: flex; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
+        .carousel-slide { min-width: 100%; height: 100%; flex-shrink: 0; }
+        
+        /* Modal / Lightbox */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #lightbox.open { display: flex; opacity: 1; }
+
         /* Auth dropdown */
         #auth-dropdown {
             transform: translateY(-8px);
@@ -55,6 +73,8 @@
             to   { opacity:1; transform:translateY(0); }
         }
         .fade-up { animation: fadeUp .4s ease forwards; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
@@ -136,6 +156,23 @@
                                 <button type="submit" id="btn-login"
                                         class="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 mt-1"
                                         style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">Sign In</button>
+
+                                <div class="relative py-2 flex items-center">
+                                    <div class="flex-grow border-t border-gray-100"></div>
+                                    <span class="flex-shrink mx-3 text-[10px] font-bold text-gray-300 uppercase tracking-widest">OR</span>
+                                    <div class="flex-grow border-t border-gray-100"></div>
+                                </div>
+
+                                <a href="{{ route('google.login') }}" 
+                                   class="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                    </svg>
+                                    Continue with Google
+                                </a>
                             </form>
                         </div>
                         {{-- Register --}}
@@ -173,6 +210,23 @@
                                 <button type="submit" id="btn-register"
                                         class="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 mt-1"
                                         style="background: linear-gradient(135deg,#c9872a,#e8a83c);">Create Account</button>
+
+                                <div class="relative py-2 flex items-center">
+                                    <div class="flex-grow border-t border-gray-100"></div>
+                                    <span class="flex-shrink mx-3 text-[10px] font-bold text-gray-300 uppercase tracking-widest">OR</span>
+                                    <div class="flex-grow border-t border-gray-100"></div>
+                                </div>
+
+                                <a href="{{ route('google.login') }}" 
+                                   class="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                    </svg>
+                                    Sign up with Google
+                                </a>
                             </form>
                         </div>
                         <div class="px-5 pb-4 text-center">
@@ -200,30 +254,58 @@
         {{-- Left: Images + Description --}}
         <div class="xl:col-span-2 space-y-6 fade-up">
 
-            {{-- Image Gallery --}}
-            <div class="bg-white rounded-2xl card-shine overflow-hidden">
-                <div class="relative h-80 overflow-hidden bg-jungle-100">
-                    @if($tour->images->isNotEmpty())
-                        <img id="main-image"
-                             src="{{ asset('storage/' . $tour->images->first()->image) }}"
-                             alt="{{ $tour->name }}"
-                             class="w-full h-full object-cover transition-opacity duration-300">
-                    @else
-                        <div class="w-full h-full flex items-center justify-center"
+            {{-- Image Gallery / Carousel --}}
+            <div class="bg-white rounded-2xl card-shine overflow-hidden group/gallery">
+                <div class="carousel-container relative h-80 sm:h-96 overflow-hidden bg-jungle-100">
+                    
+                    {{-- Main Track --}}
+                    <div id="carousel-track" class="carousel-track h-full">
+                        @forelse($tour->images as $img)
+                        <div class="carousel-slide cursor-zoom-in" onclick="openLightbox('{{ asset('storage/' . $img->image) }}')">
+                            <img src="{{ asset('storage/' . $img->image) }}" 
+                                 alt="{{ $tour->name }}"
+                                 class="w-full h-full object-cover">
+                        </div>
+                        @empty
+                        <div class="carousel-slide w-full h-full flex items-center justify-center"
                              style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
                             <svg class="w-16 h-16 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
                             </svg>
                         </div>
+                        @endforelse
+                    </div>
+
+                    {{-- Navigation Arrows (Only if multiple) --}}
+                    @if($tour->images->count() > 1)
+                        <button onclick="moveSlide(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur text-white flex items-center justify-center opacity-0 group-hover/gallery:opacity-100 transition-opacity hover:bg-white/40 z-20">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button onclick="moveSlide(1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur text-white flex items-center justify-center opacity-0 group-hover/gallery:opacity-100 transition-opacity hover:bg-white/40 z-20">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+
+                        {{-- Dots Indicator --}}
+                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                            @foreach($tour->images as $index => $img)
+                            <button onclick="goToSlide({{ $index }})" 
+                                    class="carousel-dot w-2 h-2 rounded-full transition-all duration-300 {{ $index === 0 ? 'bg-white scale-125' : 'bg-white/40' }}"></button>
+                            @endforeach
+                        </div>
                     @endif
+
+                    {{-- Fullscreen Toggle Label --}}
+                    <div class="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur text-[10px] font-bold text-white uppercase tracking-widest pointer-events-none opacity-0 group-hover/gallery:opacity-100 transition-opacity z-20">
+                        Click to Expand
+                    </div>
                 </div>
 
                 {{-- Thumbnails --}}
                 @if($tour->images->count() > 1)
-                <div class="p-4 flex gap-3 overflow-x-auto">
+                <div class="p-4 flex gap-3 overflow-x-auto scrollbar-hide border-t border-gray-100">
                     @foreach($tour->images as $index => $img)
-                    <button onclick="switchImage('{{ asset('storage/' . $img->image) }}', this)"
-                            class="thumb shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 {{ $index === 0 ? 'active border-amber-400' : 'border-transparent' }}">
+                    <button onclick="goToSlide({{ $index }})"
+                            class="thumb shrink-0 w-20 h-14 rounded-xl overflow-hidden border-2 transition-all {{ $index === 0 ? 'active border-amber-400 scale-105' : 'border-transparent opacity-60 hover:opacity-100' }}">
                         <img src="{{ asset('storage/' . $img->image) }}" class="w-full h-full object-cover">
                     </button>
                     @endforeach
@@ -234,9 +316,9 @@
             {{-- About --}}
             <div class="bg-white rounded-2xl card-shine p-6">
                 <h2 class="font-display text-jungle-700 font-bold text-lg mb-3">About This Tour</h2>
-                <p class="text-gray-600 text-sm leading-relaxed">
+                <div class="text-gray-600 text-sm leading-relaxed whitespace-pre-line">
                     {{ $tour->description ?? 'Experience the best of Davao City with this amazing tour.' }}
-                </p>
+                </div>
             </div>
 
             {{-- Available Schedules --}}
@@ -370,15 +452,127 @@
     © {{ date('Y') }} DavaoTours — Proudly showcasing Davao City, Philippines 🇵🇭
 </footer>
 
+{{-- ===== LIGHTBOX MODAL ===== --}}
+<div id="lightbox" onclick="closeLightbox()" class="items-center justify-center p-4">
+    <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white/70 hover:text-white transition-colors">
+        <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <img id="lightbox-img" class="max-w-full max-h-full rounded-2xl shadow-2xl transition-transform duration-300 scale-95" src="" alt="Full View">
+</div>
+
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
-// Image gallery
-function switchImage(src, btn) {
-    document.getElementById('main-image').src = src;
-    document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active', 'border-amber-400'));
-    btn.classList.add('active', 'border-amber-400');
+// Carousel Logic
+let currentSlide = 0;
+const totalSlides = {{ $tour->images->count() }};
+const track = document.getElementById('carousel-track');
+const dots = document.querySelectorAll('.carousel-dot');
+const thumbs = document.querySelectorAll('.thumb');
+const container = document.querySelector('.carousel-container');
+
+let autoPlayInterval;
+const autoPlayDelay = 5000;
+
+function startAutoPlay() {
+    if (totalSlides > 1 && !autoPlayInterval) {
+        autoPlayInterval = setInterval(() => {
+            moveSlide(1, false);
+        }, autoPlayDelay);
+    }
 }
+
+function stopAutoPlay() {
+    clearInterval(autoPlayInterval);
+    autoPlayInterval = null;
+}
+
+function updateCarousel() {
+    if (!track) return;
+    track.style.transform = `translateX(-${currentSlide * 100}%)`;
+    
+    // Update dots
+    dots.forEach((dot, i) => {
+        dot.classList.toggle('bg-white', i === currentSlide);
+        dot.classList.toggle('scale-125', i === currentSlide);
+        dot.classList.toggle('bg-white/40', i !== currentSlide);
+    });
+
+    // Update thumbs
+    thumbs.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === currentSlide);
+        thumb.classList.toggle('border-amber-400', i === currentSlide);
+        thumb.classList.toggle('scale-105', i === currentSlide);
+        thumb.classList.toggle('opacity-60', i !== currentSlide);
+        thumb.classList.toggle('border-transparent', i !== currentSlide);
+        if (i === currentSlide) thumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
+}
+
+function moveSlide(direction, manual = true) {
+    if (manual) stopAutoPlay();
+    currentSlide = (currentSlide + direction + totalSlides) % totalSlides;
+    updateCarousel();
+    if (manual) startAutoPlay();
+}
+
+function goToSlide(index) {
+    stopAutoPlay();
+    currentSlide = index;
+    updateCarousel();
+    startAutoPlay();
+}
+
+// Initial AutoPlay
+startAutoPlay();
+
+// Pause on Interaction
+if (container) {
+    container.addEventListener('mouseenter', stopAutoPlay);
+    container.addEventListener('mouseleave', startAutoPlay);
+    container.addEventListener('touchstart', stopAutoPlay, {passive: true});
+    container.addEventListener('touchend', startAutoPlay, {passive: true});
+}
+
+// Swipe Support
+let touchStartX = 0;
+let touchEndX = 0;
+
+if (track) {
+    track.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, {passive: true});
+    track.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipe();
+    }, {passive: true});
+}
+
+function handleSwipe() {
+    if (touchStartX - touchEndX > 50) moveSlide(1);  // Swipe left
+    if (touchEndX - touchStartX > 50) moveSlide(-1); // Swipe right
+}
+
+// Lightbox Logic
+function openLightbox(src) {
+    const lightbox = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    img.src = src;
+    lightbox.classList.add('open');
+    setTimeout(() => img.classList.remove('scale-95'), 10);
+}
+
+function closeLightbox() {
+    const lightbox = document.getElementById('lightbox');
+    const img = document.getElementById('lightbox-img');
+    img.classList.add('scale-95');
+    lightbox.classList.remove('open');
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') moveSlide(-1);
+    if (e.key === 'ArrowRight') moveSlide(1);
+    if (e.key === 'Escape') closeLightbox();
+});
 
 // Auth dropdown
 function toggleAuthDropdown() {
@@ -486,6 +680,39 @@ async function submitRegister(e) {
     finally { setLoading('btn-register', false); }
 }
 </script>
+
+{{-- Conflict Rejection Modal --}}
+@if(session('conflict_booking'))
+<div id="conflict-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div class="absolute inset-0 bg-jungle-700/40 backdrop-blur-sm"></div>
+    <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-[fadeUp_0.3s_ease-out] border border-gray-100">
+        <div class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 17c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        </div>
+        
+        <h3 class="font-display font-bold text-jungle-700 text-2xl mb-2">Scheduling Conflict</h3>
+        <p class="text-gray-500 text-sm leading-relaxed mb-6">
+            You already have a confirmed booking for <strong class="text-jungle-700">{{ session('conflict_booking')['date'] }}</strong> 
+            (<span class="text-amber-400 font-medium">{{ session('conflict_booking')['tour_name'] }}</span>). 
+            Please choose a different date or manage your existing schedules.
+        </p>
+
+        <div class="flex flex-col gap-3">
+            <a href="{{ route('client.bookings') }}" 
+               class="w-full py-3.5 rounded-xl text-sm font-bold text-white text-center transition-all hover:shadow-lg"
+               style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
+                View My Bookings
+            </a>
+            <button onclick="document.getElementById('conflict-modal').remove()" 
+                    class="w-full py-3.5 rounded-xl text-sm font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+@endif
 
 </body>
 </html>

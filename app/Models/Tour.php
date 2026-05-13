@@ -23,4 +23,9 @@ public function schedules()
 {
     return $this->hasMany(TourSchedule::class, 'tour_id');
 }
+
+public function bookings()
+{
+    return $this->hasManyThrough(TourBooking::class, TourSchedule::class, 'tour_id', 'tour_sched_id');
+}
 }

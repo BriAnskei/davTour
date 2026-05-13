@@ -282,18 +282,41 @@
 </nav>
 
 {{-- ===== HERO ===== --}}
-<section class="relative overflow-hidden py-20 px-6"
-         style="background: linear-gradient(135deg,#122a1e 0%,#1a3a2a 60%,#2d6a4f 100%);">
-    <div class="absolute inset-0 opacity-10"
+<section class="relative overflow-hidden py-32 px-6 min-h-[500px] flex items-center justify-center">
+    
+    {{-- Carousel Background --}}
+    <div class="absolute inset-0 z-0">
+        @if($carouselImages->isNotEmpty())
+            <div id="hero-carousel" class="relative w-full h-full">
+                @foreach($carouselImages as $index => $image)
+                    <div class="hero-slide absolute inset-0 transition-opacity duration-1000 ease-in-out {{ $index === 0 ? 'opacity-100' : 'opacity-0' }}"
+                         style="background-image: url('{{ $image }}'); background-size: cover; background-position: center;">
+                        {{-- Dark Overlay --}}
+                        <div class="absolute inset-0 bg-black/50"></div>
+                    </div>
+                @endforeach
+            </div>
+        @else
+            <div class="absolute inset-0" style="background: linear-gradient(135deg,#122a1e 0%,#1a3a2a 60%,#2d6a4f 100%);">
+                <div class="absolute inset-0 bg-black/40"></div>
+            </div>
+        @endif
+    </div>
+
+    {{-- Pattern Overlay --}}
+    <div class="absolute inset-0 opacity-10 pointer-events-none z-10"
          style="background-image:url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23c9872a\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
-    <div class="relative max-w-3xl mx-auto text-center">
+    
+    <div class="relative max-w-4xl mx-auto text-center z-20">
+        {{-- Text Content --}}
         <p class="text-amber-300 text-xs font-semibold uppercase tracking-widest mb-3">Davao City, Philippines</p>
         <h1 class="font-display text-white text-4xl sm:text-5xl font-bold leading-tight mb-4">
             Discover the Pearl<br>of the South
         </h1>
-        <p class="text-white/60 text-base mb-8 max-w-xl mx-auto">
+        <p class="text-white/80 text-base mb-10 max-w-xl mx-auto drop-shadow-md">
             From Mt. Apo's summit to the shores of Samal Island — explore Davao's most breathtaking destinations.
         </p>
+
         <form method="GET" action="{{ route('client.index') }}" class="flex gap-2 max-w-md mx-auto">
             <div class="flex-1 relative">
                 <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -302,7 +325,7 @@
                        class="w-full pl-11 pr-4 py-3.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 bg-white/95">
             </div>
             <button type="submit"
-                    class="px-5 py-3.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+                    class="px-5 py-3.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all shadow-lg"
                     style="background:#c9872a;">Search</button>
         </form>
     </div>
@@ -400,6 +423,26 @@
 {{-- ===== SCRIPTS ===== --}}
 <script>
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+
+// ── Hero Carousel ──
+let currentHeroSlide = 0;
+const heroSlides = document.querySelectorAll('.hero-slide');
+
+function nextHeroSlide() {
+    if (heroSlides.length <= 1) return;
+    
+    heroSlides[currentHeroSlide].classList.remove('opacity-100');
+    heroSlides[currentHeroSlide].classList.add('opacity-0');
+    
+    currentHeroSlide = (currentHeroSlide + 1) % heroSlides.length;
+    
+    heroSlides[currentHeroSlide].classList.remove('opacity-0');
+    heroSlides[currentHeroSlide].classList.add('opacity-100');
+}
+
+if (heroSlides.length > 1) {
+    setInterval(nextHeroSlide, 5000);
+}
 
 // ── Dropdown toggle ──
 function toggleAuthDropdown() {
