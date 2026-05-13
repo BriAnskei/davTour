@@ -153,17 +153,31 @@
                             {{ ucfirst($booking->status) }}
                         </span>
 
-                        {{-- Cancel button (pending only) --}}
-                        @if($booking->status === 'pending')
-                        <form method="POST" action="{{ route('client.bookings.cancel', $booking->id) }}"
-                              onsubmit="return confirm('Are you sure you want to cancel this booking?')">
-                            @csrf @method('PATCH')
-                            <button type="submit"
-                                    class="text-xs text-red-400 hover:text-red-600 font-semibold transition-colors">
-                                Cancel Booking
-                            </button>
-                        </form>
-                        @endif
+                        <div class="flex items-center gap-3">
+                            {{-- Resume Payment button (pending only) --}}
+                            @if($booking->status === 'pending')
+                            <form method="POST" action="{{ route('client.payment.resume', $booking->id) }}">
+                                @csrf
+                                <button type="submit"
+                                        class="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:shadow-lg"
+                                        style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
+                                    Complete Payment
+                                </button>
+                            </form>
+                            @endif
+                            
+                            {{-- Cancel button (always visible unless already cancelled) --}}
+                            @if($booking->status !== 'cancelled')
+                            <form method="POST" action="{{ route('client.bookings.cancel', $booking->id) }}"
+                                  onsubmit="return confirm('Are you sure you want to cancel this booking?')">
+                                @csrf @method('PATCH')
+                                <button type="submit"
+                                        class="text-xs text-red-400 hover:text-red-600 font-semibold transition-colors">
+                                    Cancel
+                                </button>
+                            </form>
+                            @endif
+                        </div>
 
                         <p class="text-xs text-gray-400">
                             Booked {{ $booking->created_at->format('M d, Y') }}
@@ -201,6 +215,35 @@
 <footer class="mt-16 py-8 border-t border-gray-200 text-center text-xs text-gray-400">
     © {{ date('Y') }} DavaoTours — Proudly showcasing Davao City, Philippines 🇵🇭
 </footer>
+
+{{-- Conflict Rejection Modal --}}
+@if(session('conflict_booking'))
+<div id="conflict-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
+    <div class="absolute inset-0 bg-jungle-700/40 backdrop-blur-sm"></div>
+    <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-[fadeUp_0.3s_ease-out] border border-gray-100">
+        <div class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 17c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        </div>
+        
+        <h3 class="font-display font-bold text-jungle-700 text-2xl mb-2">Scheduling Conflict</h3>
+        <p class="text-gray-500 text-sm leading-relaxed mb-6">
+            You already have a confirmed booking for <strong class="text-jungle-700">{{ session('conflict_booking')['date'] }}</strong> 
+            (<span class="text-amber-400 font-medium">{{ session('conflict_booking')['tour_name'] }}</span>). 
+            Please choose a different date or manage your existing schedules.
+        </p>
+
+        <div class="flex flex-col gap-3">
+            <button onclick="document.getElementById('conflict-modal').remove()" 
+                    class="w-full py-3.5 rounded-xl text-sm font-bold text-white text-center transition-all hover:shadow-lg"
+                    style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
+                I Understand
+            </button>
+        </div>
+    </div>
+</div>
+@endif
 
 </body>
 </html>

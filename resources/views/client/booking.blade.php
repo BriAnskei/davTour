@@ -105,9 +105,12 @@
                 @endif
 
                 {{-- Posts to Stripe checkout --}}
-                <form method="POST" action="{{ route('client.payment.checkout') }}" class="space-y-5">
+                <form method="POST" action="{{ route('client.payment.checkout') }}" enctype="multipart/form-data" class="space-y-5">
                     @csrf
                     <input type="hidden" name="tour_sched_id" value="{{ $schedule->id }}">
+                    @if($existingBooking)
+                        <input type="hidden" name="booking_id" value="{{ $existingBooking->id }}">
+                    @endif
 
                     {{-- Guest name (read-only) --}}
                     <div>
@@ -128,18 +131,91 @@
                         <label class="block text-sm font-semibold text-gray-600 mb-1.5">
                             Number of Persons <span class="text-red-400">*</span>
                         </label>
-                        <input type="number" name="p_count" value="{{ old('p_count', 1) }}"
+                        <input type="number" id="p_count" name="p_count" value="{{ old('p_count', $existingBooking ? $existingBooking->p_count : 1) }}"
                                min="1" max="{{ $remaining }}"
                                class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm
                                       focus:outline-none focus:border-jungle-500 focus:ring-2 focus:ring-jungle-100 transition-all
                                       @error('p_count') border-red-400 @enderror"
-                               oninput="updateTotal(this.value)">
+                               oninput="updateTotal()">
                         <p class="text-xs text-gray-400 mt-1">
                             Maximum {{ $remaining }} slot(s) available for this date.
                         </p>
                         @error('p_count')
                             <p class="text-red-400 text-xs mt-1">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    {{-- Number of senior citizens --}}
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">
+                            Number of Senior Citizens (20% Discount)
+                        </label>
+                        <input type="number" id="senior_count" name="senior_count" value="{{ old('senior_count', $existingBooking ? $existingBooking->senior_count : 0) }}"
+                               min="0"
+                               class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm
+                                      focus:outline-none focus:border-jungle-500 focus:ring-2 focus:ring-jungle-100 transition-all
+                                      @error('senior_count') border-red-400 @enderror"
+                               oninput="updateTotal()">
+                        <p class="text-xs text-gray-400 mt-1">
+                            Senior count cannot exceed total number of persons.
+                        </p>
+                        @error('senior_count')
+                            <p class="text-red-400 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Senior ID Images --}}
+                    <div id="senior_id_container" class="{{ old('senior_count', $existingBooking ? $existingBooking->senior_count : 0) > 0 ? '' : 'hidden' }}">
+                        <label class="block text-sm font-semibold text-gray-600 mb-1.5">
+                            Senior Citizen ID Pictures <span class="text-red-400">*</span>
+                        </label>
+                        
+                        <div class="flex items-center justify-between mb-1">
+                            <span id="image-count-label" class="text-xs font-semibold text-gray-400">0 / 0</span>
+                        </div>
+                        <p class="text-gray-400 text-[10px] mb-3 uppercase tracking-wider font-bold">Upload up to <span id="max-images-text">0</span> ID images (max 2MB each).</p>
+
+                        <div id="drop-zone"
+                             class="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center hover:border-jungle-500 transition-colors cursor-pointer"
+                             onclick="document.getElementById('images-input').click()">
+                            <div class="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center" style="background:#d6ece0;">
+                                <svg class="w-5 h-5" style="color:#1a3a2a;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <p class="text-xs text-gray-500 font-medium" id="drop-zone-label">Click to upload ID images</p>
+                            <input type="file" id="images-input" multiple accept="image/jpeg,image/png,image/jpg" class="hidden" onchange="handleFiles(this.files)">
+                        </div>
+
+                        {{-- Base64 hidden inputs injected here by JS --}}
+                        <div id="base64-inputs"></div>
+
+                        {{-- Existing Images (if resuming) --}}
+                        @if($existingBooking && $existingBooking->seniorImages->isNotEmpty())
+                            <div class="mt-4">
+                                <p class="text-[10px] text-gray-400 font-bold uppercase mb-2">Previously Uploaded IDs:</p>
+                                <div class="grid grid-cols-4 gap-2">
+                                    @foreach($existingBooking->seniorImages as $image)
+                                        <div class="relative aspect-square rounded-lg overflow-hidden border border-gray-100 group">
+                                            <img src="{{ asset('storage/' . $image->image_path) }}" class="w-full h-full object-cover">
+                                            <input type="hidden" name="existing_senior_images[]" value="{{ $image->id }}">
+                                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span class="text-[10px] text-white font-bold">Saved</span>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                                <p class="text-[10px] text-jungle-500 mt-2 italic">
+                                    Note: Adding new images will be added to your current selection.
+                                </p>
+                            </div>
+                        @endif
+
+                        {{-- Image Previews --}}
+                        <div id="image-previews" class="grid grid-cols-4 gap-2 mt-4 hidden"></div>
+
+                        @error('senior_images_base64')<p class="text-red-400 text-xs mt-2">{{ $message }}</p>@enderror
+                        @error('senior_images_base64.*')<p class="text-red-400 text-xs mt-2">{{ $message }}</p>@enderror
                     </div>
 
                     {{-- Stripe notice --}}
@@ -155,8 +231,17 @@
                         </div>
                     </div>
 
-                    <button type="submit"
-                            class="w-full py-3.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all hover:shadow-lg flex items-center justify-center gap-2"
+                    {{-- Terms and Conditions --}}
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="tnc_checkbox" name="tnc" required {{ old('tnc') ? 'checked' : '' }}
+                               class="w-4 h-4 text-jungle-500 border-gray-300 rounded focus:ring-jungle-500">
+                        <label for="tnc_checkbox" class="text-xs text-gray-500">
+                            I agree to the <button type="button" onclick="openTncModal()" class="text-jungle-700 font-semibold underline decoration-jungle-200 underline-offset-2 hover:text-amber-400 transition-colors">Terms and Conditions</button>
+                        </label>
+                    </div>
+
+                    <button type="submit" id="submit_btn"
+                            class="w-full py-3.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -208,6 +293,10 @@
                         <span class="text-gray-500">Persons</span>
                         <span id="summary-pax" class="font-semibold text-jungle-700">1</span>
                     </div>
+                    <div id="summary-senior-row" class="flex justify-between hidden">
+                        <span class="text-gray-500 italic">Senior Discount (20%)</span>
+                        <span id="summary-senior-discount" class="font-semibold text-red-400">-₱0.00</span>
+                    </div>
                     <div class="flex justify-between pt-2 border-t border-gray-100">
                         <span class="font-bold text-gray-700">Total</span>
                         <span id="summary-total" class="font-display font-bold text-amber-400 text-lg">
@@ -229,18 +318,193 @@
     © {{ date('Y') }} DavaoTours — Proudly showcasing Davao City, Philippines 🇵🇭
 </footer>
 
+{{-- TNC Modal --}}
+<div id="tnc-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden">
+    <div class="absolute inset-0 bg-jungle-700/40 backdrop-blur-sm" onclick="closeTncModal()"></div>
+    <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-[fadeUp_0.3s_ease-out] border border-gray-100">
+        <div class="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
+            <svg class="w-8 h-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+        </div>
+        
+        <h3 class="font-display font-bold text-jungle-700 text-2xl mb-4">Terms and Conditions</h3>
+        <div class="text-gray-500 text-sm leading-relaxed mb-8 space-y-4">
+            <p>Please read our booking rules carefully before proceeding:</p>
+            <ul class="list-disc pl-5 space-y-2">
+                <li class="font-medium text-jungle-700">No refund if the client cancels the booking.</li>
+                <li>Ensure all guest details are accurate before completing the payment.</li>
+                <li>Senior citizen discounts require a valid ID verification.</li>
+            </ul>
+        </div>
+
+        <button onclick="closeTncModal()" 
+                class="w-full py-3.5 rounded-xl text-sm font-bold text-white text-center transition-all hover:shadow-lg"
+                style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
+            I Understand
+        </button>
+    </div>
+</div>
+
 <script>
 const pricePerPerson = {{ $schedule->tour->price }};
+let imagePool = [];
+let maxSeniorImages = 0;
 
-function updateTotal(pax) {
-    const count = parseInt(pax) || 1;
-    document.getElementById('summary-pax').textContent   = count;
+function handleFiles(newFiles) {
+    const remaining = maxSeniorImages - imagePool.length;
+    if (remaining <= 0) return;
+
+    const accepted = Array.from(newFiles).slice(0, remaining);
+
+    accepted.forEach(file => {
+        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) return;
+        if (file.size > 2 * 1024 * 1024) return;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            imagePool.push({ base64: e.target.result });
+            updateImageUI();
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('images-input').value = '';
+}
+
+function removeImage(index) {
+    imagePool.splice(index, 1);
+    updateImageUI();
+}
+
+function syncBase64Inputs() {
+    const container = document.getElementById('base64-inputs');
+    container.innerHTML = '';
+    imagePool.forEach(item => {
+        const input = document.createElement('input');
+        input.type  = 'hidden';
+        input.name  = 'senior_images_base64[]';
+        input.value = item.base64;
+        container.appendChild(input);
+    });
+}
+
+function updateImageUI() {
+    const count = imagePool.length;
+    const pct   = maxSeniorImages > 0 ? (count / maxSeniorImages) * 100 : 0;
+
+    syncBase64Inputs();
+
+    document.getElementById('image-count-label').textContent = count + ' / ' + maxSeniorImages;
+    document.getElementById('max-images-text').textContent = maxSeniorImages;
+
+    const label = document.getElementById('drop-zone-label');
+    if (maxSeniorImages > 0 && count >= maxSeniorImages) {
+        label.textContent = 'Maximum limit reached';
+        label.classList.add('text-jungle-700');
+    } else {
+        label.textContent = 'Click to upload ID images';
+        label.classList.remove('text-jungle-700');
+    }
+
+    const container = document.getElementById('image-previews');
+    container.innerHTML = '';
+
+    if (count > 0) {
+        container.classList.remove('hidden');
+        imagePool.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'relative aspect-square rounded-xl overflow-hidden border border-gray-100 group';
+            div.innerHTML = `
+                <img src="${item.base64}" class="w-full h-full object-cover">
+                <button
+                    type="button"
+                    onclick="removeImage(${index})"
+                    class="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                    title="Remove">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            `;
+            container.appendChild(div);
+        });
+    } else {
+        container.classList.add('hidden');
+    }
+}
+
+function openTncModal() {
+    document.getElementById('tnc-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeTncModal() {
+    document.getElementById('tnc-modal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Validation logic
+const tncCheckbox = document.getElementById('tnc_checkbox');
+const submitBtn = document.getElementById('submit_btn');
+
+function validateForm() {
+    if (tncCheckbox.checked) {
+        submitBtn.disabled = false;
+    } else {
+        submitBtn.disabled = true;
+    }
+}
+
+tncCheckbox.addEventListener('change', validateForm);
+
+// Initial validation call
+validateForm();
+
+function updateTotal() {
+    const pCountInput = document.getElementById('p_count');
+    const seniorCountInput = document.getElementById('senior_count');
+    const seniorIdContainer = document.getElementById('senior_id_container');
+    
+    let pCount = parseInt(pCountInput.value) || 1;
+    let seniorCount = parseInt(seniorCountInput.value) || 0;
+    
+    // Ensure senior count does not exceed total persons
+    if (seniorCount > pCount) {
+        seniorCount = pCount;
+        seniorCountInput.value = pCount;
+    }
+
+    maxSeniorImages = seniorCount;
+    
+    // Toggle ID upload visibility
+    if (seniorCount > 0) {
+        seniorIdContainer.classList.remove('hidden');
+        document.getElementById('summary-senior-row').classList.remove('hidden');
+    } else {
+        seniorIdContainer.classList.add('hidden');
+        document.getElementById('summary-senior-row').classList.add('hidden');
+    }
+    
+    updateImageUI();
+
+    const seniorDiscountPerPerson = pricePerPerson * 0.20;
+    const totalDiscount = seniorCount * seniorDiscountPerPerson;
+    const totalPrice = (pCount * pricePerPerson) - totalDiscount;
+    
+    document.getElementById('summary-pax').textContent = pCount;
+    document.getElementById('summary-senior-discount').textContent = 
+        '-₱' + totalDiscount.toLocaleString('en-PH', { minimumFractionDigits: 2 });
+    
     document.getElementById('summary-total').textContent =
-        '₱' + (pricePerPerson * count).toLocaleString('en-PH', {
+        '₱' + totalPrice.toLocaleString('en-PH', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
 }
+
+// Initial call to set values correctly on page load (especially when resuming)
+updateTotal();
 </script>
 
 {{-- Conflict Rejection Modal --}}

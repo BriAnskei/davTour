@@ -76,6 +76,26 @@
                         <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-jungle-50 text-jungle-700">
                             {{ $booking->p_count }} pax
                         </span>
+                        @if($booking->senior_count > 0)
+                            <div class="mt-1 flex flex-col gap-1">
+                                <span class="text-[10px] text-amber-500 font-semibold uppercase tracking-tighter">
+                                    Incl. {{ $booking->senior_count }} Senior(s)
+                                </span>
+                                @if($booking->seniorImages->isNotEmpty())
+                                    <div class="flex flex-wrap gap-1 mt-1">
+                                        @foreach($booking->seniorImages as $img)
+                                            <a href="{{ asset('storage/' . $img->image_path) }}" target="_blank"
+                                               class="w-6 h-6 rounded border border-slate2 overflow-hidden hover:border-jungle-500 transition-colors"
+                                               title="View Senior ID">
+                                                <img src="{{ asset('storage/' . $img->image_path) }}" class="w-full h-full object-cover">
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <span class="text-[9px] text-red-400 italic">No IDs uploaded</span>
+                                @endif
+                            </div>
+                        @endif
                     </td>
                     <td class="px-6 py-4">
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold

@@ -10,6 +10,8 @@ class TourBooking extends Model
         'user_id',
         'tour_sched_id',
         'p_count',
+        'senior_count',
+        'senior_id_image',
         'status',
     ];
 
@@ -28,5 +30,10 @@ class TourBooking extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class, 'booking_id');
+    }
+
+    public function seniorImages()
+    {
+        return $this->hasMany(SeniorCitizenImage::class, 'booking_id');
     }
 }

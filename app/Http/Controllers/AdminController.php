@@ -49,7 +49,7 @@ class AdminController extends Controller
     // ─────────────────────────────────────────
     public function bookings(Request $request)
     {
-        $query = TourBooking::with(['user', 'tourSchedule.tour']);
+        $query = TourBooking::with(['user', 'tourSchedule.tour', 'seniorImages']);
 
         // Filter by status
         if ($request->filled('status')) {

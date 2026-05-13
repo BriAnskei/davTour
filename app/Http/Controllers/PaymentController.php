@@ -57,12 +57,44 @@ class PaymentController extends Controller
     public function checkout(Request $request)
     {
         $request->validate([
-            'tour_sched_id' => 'required|exists:tour_schedules,id',
-            'p_count'       => 'required|integer|min:1',
+            'tour_sched_id'          => 'required|exists:tour_schedules,id',
+            'p_count'                => 'required|integer|min:1',
+            'senior_count'           => 'required|integer|min:0|lte:p_count',
+            'senior_images_base64'   => 'nullable|array',
+            'senior_images_base64.*' => 'nullable|string',
+            'existing_senior_images' => 'nullable|array',
+            'booking_id'             => 'nullable|exists:tour_bookings,id',
+            'tnc'                    => 'required|accepted',
         ]);
 
+        $booking = null;
+        if ($request->filled('booking_id')) {
+            $booking = TourBooking::with('seniorImages')->where('user_id', Auth::id())
+                ->where('status', 'pending')
+                ->findOrFail($request->booking_id);
+        }
+
+        // Validation for senior IDs
+        $newImagesCount = $request->senior_images_base64 ? count($request->senior_images_base64) : 0;
+        $existingCount  = $request->existing_senior_images ? count($request->existing_senior_images) : 0;
+        $totalImages    = $newImagesCount + $existingCount;
+
+        if ($request->senior_count > 0 && $totalImages === 0) {
+            return back()->withErrors(['senior_images_base64' => 'At least one Senior Citizen ID image is required.'])->withInput();
+        }
+
+        if ($totalImages > $request->senior_count) {
+             return back()->withErrors(['senior_images_base64' => "You can only upload up to {$request->senior_count} ID images."])->withInput();
+        }
+
         $schedule  = TourSchedule::with('tour')->withCount('bookings')->findOrFail($request->tour_sched_id);
-        $remaining = $schedule->slots - $schedule->bookings_count;
+        
+        // Calculate remaining slots
+        $othersCount = $schedule->bookings_count;
+        if ($booking) {
+            $othersCount -= $booking->p_count;
+        }
+        $remaining = $schedule->slots - $othersCount;
 
         // Slot check
         if ($request->p_count > $remaining) {
@@ -71,7 +103,7 @@ class PaymentController extends Controller
             ])->withInput();
         }
 
-        // Conflict check: Has the user already booked another tour on this date?
+        // Conflict check
         $requestedDate = $schedule->date;
         $conflict = TourBooking::where('user_id', Auth::id())
             ->where('status', 'confirmed')
@@ -88,55 +120,114 @@ class PaymentController extends Controller
             ]);
         }
 
-        // Duplicate booking check
-        $alreadyBooked = TourBooking::where('user_id', Auth::id())
-            ->where('tour_sched_id', $request->tour_sched_id)
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->exists();
+        // Duplicate booking check (only for new bookings)
+        if (!$booking) {
+            $alreadyBooked = TourBooking::where('user_id', Auth::id())
+                ->where('tour_sched_id', $request->tour_sched_id)
+                ->whereIn('status', ['pending', 'confirmed'])
+                ->exists();
 
-        if ($alreadyBooked) {
-            return back()->with('error', 'You already have a booking for this schedule.');
+            if ($alreadyBooked) {
+                return back()->with('error', 'You already have a booking for this schedule.');
+            }
         }
 
-        // Calculate total
-        $totalAmount = $schedule->tour->price * $request->p_count;
+        // Calculate total with 20% discount for seniors
+        $price = $schedule->tour->price;
+        $regularCount = $request->p_count - $request->senior_count;
+        $totalAmount  = ($regularCount * $price) + ($request->senior_count * $price * 0.8);
 
-        // Create a PENDING booking first
-        $booking = TourBooking::create([
-            'user_id'       => Auth::id(),
-            'tour_sched_id' => $request->tour_sched_id,
-            'p_count'       => $request->p_count,
-            'status'        => 'pending',
-        ]);
+        // Update or Create Booking
+        if ($booking) {
+            $booking->update([
+                'p_count'         => $request->p_count,
+                'senior_count'    => $request->senior_count,
+            ]);
+        } else {
+            $booking = TourBooking::create([
+                'user_id'         => Auth::id(),
+                'tour_sched_id'   => $request->tour_sched_id,
+                'p_count'         => $request->p_count,
+                'senior_count'    => $request->senior_count,
+                'status'          => 'pending',
+            ]);
+        }
+
+        // Handle Senior Images (Base64)
+        if ($request->senior_images_base64) {
+            foreach ($request->senior_images_base64 as $base64) {
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                    $imageData = substr($base64, strpos($base64, ',') + 1);
+                    $imageData = base64_decode($imageData);
+                    $extension = strtolower($type[1]); // png, jpg, etc.
+
+                    $filename  = 'senior_ids/' . uniqid() . '.' . $extension;
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $imageData);
+
+                    \App\Models\SeniorCitizenImage::create([
+                        'booking_id' => $booking->id,
+                        'image_path' => $filename,
+                    ]);
+                }
+            }
+        }
+
+        // Cleanup existing images if they are no longer in the selection
+        if ($request->filled('existing_senior_images')) {
+             $booking->seniorImages()->whereNotIn('id', $request->existing_senior_images)->delete();
+        } elseif ($booking && $booking->seniorImages()->exists()) {
+             // If senior_count is 0 or no existing_senior_images sent, but images exist, clear them
+             if ($request->senior_count == 0) {
+                 $booking->seniorImages()->delete();
+             }
+        }
 
         // Create Stripe Checkout Session
         Stripe::setApiKey(config('services.stripe.secret'));
+
+        $description = 'Tour Date: ' . \Carbon\Carbon::parse($schedule->date)->format('M d, Y') . ' | ' . $request->p_count . ' person(s)';
+        if ($request->senior_count > 0) {
+            $description .= " (Incl. {$request->senior_count} Senior Citizen discount)";
+        }
 
         $stripeSession = StripeSession::create([
             'payment_method_types' => ['card'],
             'line_items' => [[
                 'price_data' => [
                     'currency'     => 'php',
-                    'unit_amount'  => (int) ($totalAmount * 100), // Stripe uses cents
+                    'unit_amount'  => (int) ($totalAmount * 100),
                     'product_data' => [
                         'name'        => $schedule->tour->name,
-                        'description' => 'Tour Date: ' . \Carbon\Carbon::parse($schedule->date)->format('M d, Y')
-                                       . ' | ' . $request->p_count . ' person(s)',
+                        'description' => $description,
                     ],
                 ],
                 'quantity' => 1,
             ]],
             'mode'        => 'payment',
             'success_url' => route('client.payment.success') . '?session_id={CHECKOUT_SESSION_ID}&booking_id=' . $booking->id,
-            'cancel_url'  => route('client.booking.create', ['schedule_id' => $request->tour_sched_id]) . '&cancelled=1',
+            'cancel_url'  => route('client.payment.cancel') . '?schedule_id=' . $request->tour_sched_id,
             'metadata'    => [
                 'booking_id' => $booking->id,
                 'user_id'    => Auth::id(),
             ],
         ]);
 
-        // Redirect to Stripe Checkout
         return redirect($stripeSession->url);
+    }
+
+    // ─────────────────────────────────────────
+    // Client: Resume Payment for a PENDING booking
+    // ─────────────────────────────────────────
+    public function resume($id)
+    {
+        $booking = TourBooking::where('user_id', Auth::id())
+            ->where('status', 'pending')
+            ->findOrFail($id);
+
+        return redirect()->route('client.booking.create', [
+            'schedule_id' => $booking->tour_sched_id,
+            'booking_id'  => $booking->id
+        ]);
     }
 
     // ─────────────────────────────────────────
@@ -192,20 +283,11 @@ class PaymentController extends Controller
     // ─────────────────────────────────────────
     public function cancel(Request $request)
     {
-        // Delete the pending booking that was created before Stripe redirect
         $scheduleId = $request->get('schedule_id');
 
         if ($scheduleId) {
-            // Remove the pending booking for this user + schedule
-            TourBooking::where('user_id', Auth::id())
-                ->where('tour_sched_id', $scheduleId)
-                ->where('status', 'pending')
-                ->latest()
-                ->first()
-                ?->delete();
-
             return redirect()->route('client.booking.create', ['schedule_id' => $scheduleId])
-                ->with('error', 'Payment was cancelled. Please try again.');
+                ->with('error', 'Payment was cancelled. You can complete it later in your "My Bookings" page.');
         }
 
         return redirect()->route('client.index')

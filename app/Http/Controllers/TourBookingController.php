@@ -20,7 +20,18 @@ class TourBookingController extends Controller
 
         $remaining = $schedule->slots - $schedule->bookings_count;
 
-        if ($remaining <= 0) {
+        // If we are resuming a booking, the current booking is already in the count
+        $existingBooking = null;
+        if ($request->filled('booking_id')) {
+            $existingBooking = TourBooking::with('seniorImages')->where('user_id', Auth::id())
+                ->where('status', 'pending')
+                ->findOrFail($request->booking_id);
+            
+            // Adjust remaining slots to include the persons in this existing booking
+            $remaining += $existingBooking->p_count;
+        }
+
+        if ($remaining <= 0 && !$existingBooking) {
             return redirect()->route('client.show', $schedule->tour_id)
                 ->with('error', 'This schedule is fully booked.');
         }
@@ -43,7 +54,7 @@ class TourBookingController extends Controller
                 ]);
         }
 
-        return view('client.booking', compact('schedule', 'remaining'));
+        return view('client.booking', compact('schedule', 'remaining', 'existingBooking'));
     }
 
     // ─────────────────────────────────────────
@@ -105,10 +116,6 @@ class TourBookingController extends Controller
     public function cancel($id)
     {
         $booking = TourBooking::where('user_id', Auth::id())->findOrFail($id);
-
-        if ($booking->status !== 'pending') {
-            return back()->with('error', 'Only pending bookings can be cancelled.');
-        }
 
         $booking->update(['status' => 'cancelled']);
 
