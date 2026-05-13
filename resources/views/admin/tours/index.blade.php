@@ -15,6 +15,12 @@
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Add New Tour
         </a>
+        <button type="button"
+                onclick="openAuditLogModal('tours')"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-jungle-700 bg-white border border-slate2 transition-all hover:bg-gray-50">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            View History
+        </button>
     </div>
     {{-- Search --}}
     <form method="GET" action="{{ route('tours.index') }}" class="flex items-center gap-2">

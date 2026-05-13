@@ -9,9 +9,23 @@ use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Http\Request;
 
+use App\Models\AuditLog;
+
 class AdminController extends Controller
 {
-    
+    public function getAuditLogs($type)
+    {
+        $query = AuditLog::orderBy('created_at', 'desc');
+
+        if ($type !== 'all') {
+            $modelType = $type === 'tours' ? Tour::class : TourSchedule::class;
+            $query->where('auditable_type', $modelType);
+        }
+
+        $logs = $query->take(50)->get();
+
+        return response()->json($logs);
+    }
 
     // ─────────────────────────────────────────
     // Dashboard

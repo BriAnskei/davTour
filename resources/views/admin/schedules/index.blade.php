@@ -8,12 +8,20 @@
 
 {{-- Header --}}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-    <a href="{{ route('tour_schedules.create') }}"
-       class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 hover:shadow-lg transition-all"
-       style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-        New Schedule
-    </a>
+    <div class="flex gap-2">
+        <a href="{{ route('tour_schedules.create') }}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 hover:shadow-lg transition-all"
+           style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            New Schedule
+        </a>
+        <button type="button"
+                onclick="openAuditLogModal('schedules')"
+                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-jungle-700 bg-white border border-slate2 transition-all hover:bg-gray-50">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            View History
+        </button>
+    </div>
 
     <form method="GET" action="{{ route('tour_schedules.index') }}" class="flex items-center gap-2">
         <select name="tour_id" class="px-3 py-2.5 rounded-xl border border-slate2 text-sm focus:outline-none focus:border-jungle-500 bg-white text-gray-600 min-w-[180px]">

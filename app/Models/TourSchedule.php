@@ -4,8 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\LogsAudit;
+
 class TourSchedule extends Model
 {
+    use LogsAudit;
+
     protected $fillable = [
         'tour_id',
         'date',

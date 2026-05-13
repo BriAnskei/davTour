@@ -203,6 +203,7 @@
     </footer>
 </div>
 
+@include('admin.components.audit_log_modal')
 @stack('scripts')
 </body>
 </html>

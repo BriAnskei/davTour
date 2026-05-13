@@ -87,6 +87,7 @@ Route::middleware(['auth', 'can:isAdmin'])->prefix('admin')->name('admin.')->gro
     Route::get('/bookings',               [AdminController::class, 'bookings'])->name('bookings');
     Route::patch('/bookings/{id}/status', [AdminController::class, 'updateBookingStatus'])->name('bookings.status');
     Route::get('/users',                  [AdminController::class, 'users'])->name('users');
+    Route::get('/audit-logs/{type}',      [AdminController::class, 'getAuditLogs'])->name('audit_logs');
 });
 
 
