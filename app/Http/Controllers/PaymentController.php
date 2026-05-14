@@ -87,14 +87,18 @@ class PaymentController extends Controller
              return back()->withErrors(['senior_images_base64' => "You can only upload up to {$request->senior_count} ID images."])->withInput();
         }
 
-        $schedule  = TourSchedule::with('tour')->withCount('bookings')->findOrFail($request->tour_sched_id);
+        $schedule  = TourSchedule::with('tour')->findOrFail($request->tour_sched_id);
         
         // Calculate remaining slots
-        $othersCount = $schedule->bookings_count;
-        if ($booking) {
-            $othersCount -= $booking->p_count;
+        $totalPax = TourBooking::where('tour_sched_id', $schedule->id)
+            ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_CONFIRMED, TourBooking::STATUS_AWAITING_VALIDATION])
+            ->sum('p_count');
+
+        $othersPax = $totalPax;
+        if ($booking && in_array($booking->status, [TourBooking::STATUS_PENDING, TourBooking::STATUS_AWAITING_VALIDATION])) {
+            $othersPax -= $booking->p_count;
         }
-        $remaining = $schedule->slots - $othersCount;
+        $remaining = $schedule->slots - $othersPax;
 
         // Slot check
         if ($request->p_count > $remaining) {
@@ -138,10 +142,19 @@ class PaymentController extends Controller
         $totalAmount  = ($regularCount * $price) + ($request->senior_count * $price * 0.8);
 
         // Update or Create Booking
+        $prevStatus = $booking ? $booking->status : null;
+        $newStatus  = $request->senior_count > 0 ? TourBooking::STATUS_AWAITING_VALIDATION : TourBooking::STATUS_PENDING;
+        
+        // If it was already approved (pending), keep it pending so they can pay.
+        if ($prevStatus === TourBooking::STATUS_PENDING && $request->senior_count > 0) {
+            $newStatus = TourBooking::STATUS_PENDING;
+        }
+
         if ($booking) {
             $booking->update([
                 'p_count'         => $request->p_count,
                 'senior_count'    => $request->senior_count,
+                'status'          => $newStatus,
             ]);
         } else {
             $booking = TourBooking::create([
@@ -149,9 +162,12 @@ class PaymentController extends Controller
                 'tour_sched_id'   => $request->tour_sched_id,
                 'p_count'         => $request->p_count,
                 'senior_count'    => $request->senior_count,
-                'status'          => 'pending',
+                'status'          => $newStatus,
             ]);
         }
+
+        // Load relationships for notification
+        $booking->load(['user', 'tourSchedule.tour']);
 
         // Handle Senior Images (Base64)
         if ($request->senior_images_base64) {
@@ -180,6 +196,58 @@ class PaymentController extends Controller
              if ($request->senior_count == 0) {
                  $booking->seniorImages()->delete();
              }
+        }
+
+        // --- NOTIFICATIONS ---
+        $admins = \App\Models\User::where('role', 'admin')->get();
+        
+        // 1. All Bookings Notification
+        foreach ($admins as $admin) {
+            $admin->notify(new \App\Notifications\BookingNotification(
+                $booking, 
+                'new_booking', 
+                "New booking from {$booking->user->name} for {$booking->tourSchedule->tour->name}"
+            ));
+        }
+
+        // 2. Senior Validation Notification
+        if ($booking->status === TourBooking::STATUS_AWAITING_VALIDATION) {
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\BookingNotification(
+                    $booking, 
+                    'senior_validation', 
+                    "Senior ID validation required for booking #{$booking->id}"
+                ));
+            }
+
+            return redirect()->route('client.bookings')
+                ->with('success', 'Booking submitted! Please wait for admin to validate your Senior Citizen ID before proceeding to payment.');
+        }
+
+        // --- SLOT NOTIFICATIONS (Check after adding this booking's p_count) ---
+        // Note: For now we only check based on confirmed bookings + current pending
+        $totalBooked = TourBooking::where('tour_sched_id', $schedule->id)
+            ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_CONFIRMED, TourBooking::STATUS_AWAITING_VALIDATION])
+            ->sum('p_count');
+        
+        $slotsLeft = $schedule->slots - $totalBooked;
+        
+        if ($slotsLeft <= 0) {
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\BookingNotification(
+                    $booking, 
+                    'zero_slots', 
+                    "Tour {$booking->tourSchedule->tour->name} on " . \Carbon\Carbon::parse($schedule->date)->format('M d') . " is now FULL."
+                ));
+            }
+        } elseif ($slotsLeft <= 2) {
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\BookingNotification(
+                    $booking, 
+                    'low_slots', 
+                    "Only {$slotsLeft} slots left for {$booking->tourSchedule->tour->name} on " . \Carbon\Carbon::parse($schedule->date)->format('M d') . "."
+                ));
+            }
         }
 
         // Create Stripe Checkout Session
@@ -221,7 +289,7 @@ class PaymentController extends Controller
     public function resume($id)
     {
         $booking = TourBooking::where('user_id', Auth::id())
-            ->where('status', 'pending')
+            ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_REJECTED])
             ->findOrFail($id);
 
         return redirect()->route('client.booking.create', [
@@ -260,7 +328,10 @@ class PaymentController extends Controller
             }
 
             // Update booking to confirmed
-            $booking->update(['status' => 'confirmed']);
+            $booking->update(['status' => TourBooking::STATUS_CONFIRMED]);
+
+            // Check slots and notify admin
+            TourBooking::checkSlotsAndNotify($booking->tour_sched_id);
 
             // Create payment record
             Payment::create([

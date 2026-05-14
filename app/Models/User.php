@@ -4,9 +4,12 @@ namespace App\Models;
 
 // Must extend Authenticatable — NOT base Model — for Auth::user() to work
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    use Notifiable;
+
     protected $fillable = [
         'name',
         'contact_number',

@@ -9,7 +9,7 @@
 {{-- Filter Bar --}}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div class="flex gap-2 flex-wrap">
-        @foreach(['all' => 'All', 'pending' => 'Pending', 'confirmed' => 'Confirmed', 'cancelled' => 'Cancelled'] as $val => $label)
+        @foreach(['all' => 'All', 'pending' => 'Pending', 'awaiting_validation' => 'To Validate', 'confirmed' => 'Confirmed', 'cancelled' => 'Cancelled', 'rejected' => 'Rejected'] as $val => $label)
         <a href="{{ route('admin.bookings', ['status' => $val === 'all' ? null : $val]) }}"
            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
                {{ (request('status', 'all') === $val || (!request('status') && $val === 'all')) ? 'text-white' : 'bg-white border border-slate2 text-gray-500 hover:bg-gray-50' }}"
@@ -101,13 +101,22 @@
                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold
                             {{ $booking->status === 'confirmed' ? 'bg-jungle-100 text-jungle-700' :
                                ($booking->status === 'pending'   ? 'bg-amber-100 text-amber-500' :
-                               'bg-red-100 text-red-500') }}">
-                            {{ ucfirst($booking->status) }}
+                               ($booking->status === 'awaiting_validation' ? 'bg-orange-100 text-orange-600' :
+                               'bg-red-100 text-red-500')) }}">
+                            {{ $booking->status === 'awaiting_validation' ? 'Validation Required' : ucfirst($booking->status) }}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-gray-400 text-xs">{{ $booking->created_at->format('M d, Y') }}</td>
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-end gap-1">
+                            {{-- Senior Validation Button --}}
+                            @if($booking->status === 'awaiting_validation')
+                                <a href="{{ route('admin.bookings.validate', $booking->id) }}" 
+                                   class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-400 text-white hover:bg-amber-500 transition-colors shadow-sm">
+                                    Validate IDs
+                                </a>
+                            @endif
+
                             {{-- Quick status update --}}
                             @if($booking->status === 'pending')
                             <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
@@ -124,6 +133,8 @@
                                     Cancel
                                 </button>
                             </form>
+                            @elseif($booking->status === 'awaiting_validation')
+                                {{-- Only show Validate button --}}
                             @else
                             <span class="text-xs text-gray-300 italic">—</span>
                             @endif

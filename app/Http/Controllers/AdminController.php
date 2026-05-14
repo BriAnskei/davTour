@@ -83,9 +83,11 @@ class AdminController extends Controller
 
         // Count per status for the filter tabs
         $counts = [
-            'pending'   => TourBooking::where('status', 'pending')->count(),
-            'confirmed' => TourBooking::where('status', 'confirmed')->count(),
-            'cancelled' => TourBooking::where('status', 'cancelled')->count(),
+            'pending'             => TourBooking::where('status', 'pending')->count(),
+            'awaiting_validation' => TourBooking::where('status', 'awaiting_validation')->count(),
+            'confirmed'           => TourBooking::where('status', 'confirmed')->count(),
+            'cancelled'           => TourBooking::where('status', 'cancelled')->count(),
+            'rejected'            => TourBooking::where('status', 'rejected')->count(),
         ];
 
         return view('admin.bookings.index', compact('bookings', 'counts'));
@@ -102,6 +104,10 @@ class AdminController extends Controller
 
         $booking = TourBooking::findOrFail($id);
         $booking->update(['status' => $request->status]);
+
+        if ($request->status === 'confirmed') {
+            TourBooking::checkSlotsAndNotify($booking->tour_sched_id);
+        }
 
         return back()->with('success', 'Booking status updated to ' . $request->status . '.');
     }
@@ -133,5 +139,55 @@ class AdminController extends Controller
         $adminCount  = User::where('role', 'admin')->count();
 
         return view('admin.users.index', compact('users', 'totalUsers', 'clientCount', 'adminCount'));
+    }
+
+    // ─────────────────────────────────────────
+    // Notifications
+    // ─────────────────────────────────────────
+    public function getNotifications()
+    {
+        $notifications = auth()->user()->unreadNotifications;
+        return response()->json($notifications);
+    }
+
+    public function markNotificationsAsRead()
+    {
+        auth()->user()->unreadNotifications->markAsRead();
+        return response()->json(['success' => true]);
+    }
+
+    // ─────────────────────────────────────────
+    // Senior Validation
+    // ─────────────────────────────────────────
+    public function showValidationPage($id)
+    {
+        $booking = TourBooking::with(['user', 'tourSchedule.tour', 'seniorImages'])->findOrFail($id);
+        
+        if ($booking->senior_count === 0) {
+            return redirect()->route('admin.bookings')->with('error', 'This booking does not require senior validation.');
+        }
+
+        return view('admin.bookings.validate', compact('booking'));
+    }
+
+    public function validateSeniorBooking(Request $request, $id)
+    {
+        $request->validate([
+            'action' => 'required|in:approve,reject',
+            'reason' => 'required_if:action,reject|nullable|string',
+        ]);
+
+        $booking = TourBooking::findOrFail($id);
+
+        if ($request->action === 'approve') {
+            $booking->update(['status' => TourBooking::STATUS_PENDING]);
+            $message = 'Senior ID validated! Booking is now awaiting payment.';
+        } else {
+            $booking->update(['status' => TourBooking::STATUS_REJECTED]);
+            $message = 'Senior ID rejected. Booking status updated to rejected.';
+            // Optionally notify user here
+        }
+
+        return redirect()->route('admin.bookings')->with('success', $message);
     }
 }

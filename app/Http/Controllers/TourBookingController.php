@@ -15,20 +15,25 @@ class TourBookingController extends Controller
     public function create(Request $request)
     {
         $schedule = TourSchedule::with(['tour.images'])
-            ->withCount('bookings')
             ->findOrFail($request->schedule_id);
 
-        $remaining = $schedule->slots - $schedule->bookings_count;
+        $totalPax = TourBooking::where('tour_sched_id', $schedule->id)
+            ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_CONFIRMED, TourBooking::STATUS_AWAITING_VALIDATION])
+            ->sum('p_count');
+
+        $remaining = $schedule->slots - $totalPax;
 
         // If we are resuming a booking, the current booking is already in the count
         $existingBooking = null;
         if ($request->filled('booking_id')) {
             $existingBooking = TourBooking::with('seniorImages')->where('user_id', Auth::id())
-                ->where('status', 'pending')
+                ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_REJECTED])
                 ->findOrFail($request->booking_id);
             
-            // Adjust remaining slots to include the persons in this existing booking
-            $remaining += $existingBooking->p_count;
+            // If it was already in the active count, add it back to remaining
+            if ($existingBooking->status !== TourBooking::STATUS_REJECTED) {
+                $remaining += $existingBooking->p_count;
+            }
         }
 
         if ($remaining <= 0 && !$existingBooking) {
@@ -90,8 +95,19 @@ class TourBookingController extends Controller
             'user_id'       => Auth::id(),
             'tour_sched_id' => $request->tour_sched_id,
             'p_count'       => $request->p_count,
-            'status'        => 'pending',
+            'status'        => TourBooking::STATUS_PENDING,
         ]);
+
+        // Notify admins (generic)
+        $newBooking = TourBooking::with(['user', 'tourSchedule.tour'])->where('user_id', Auth::id())->latest()->first();
+        $admins = \App\Models\User::where('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            $admin->notify(new \App\Notifications\BookingNotification(
+                $newBooking,
+                'new_booking',
+                "New manual booking from " . Auth::user()->name
+            ));
+        }
 
         return redirect()->route('client.bookings')
             ->with('success', 'Booking placed successfully! Please wait for confirmation.');

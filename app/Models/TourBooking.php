@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class TourBooking extends Model
 {
+    const STATUS_PENDING = 'pending';
+    const STATUS_AWAITING_VALIDATION = 'awaiting_validation';
+    const STATUS_CONFIRMED = 'confirmed';
+    const STATUS_CANCELLED = 'cancelled';
+    const STATUS_REJECTED = 'rejected';
+
     protected $fillable = [
         'user_id',
         'tour_sched_id',
@@ -35,5 +41,36 @@ class TourBooking extends Model
     public function seniorImages()
     {
         return $this->hasMany(SeniorCitizenImage::class, 'booking_id');
+    }
+
+    public static function checkSlotsAndNotify($scheduleId)
+    {
+        $schedule = TourSchedule::with('tour')->findOrFail($scheduleId);
+        $totalConfirmed = self::where('tour_sched_id', $scheduleId)
+            ->where('status', self::STATUS_CONFIRMED)
+            ->sum('p_count');
+        
+        $slotsLeft = $schedule->slots - $totalConfirmed;
+        $admins = User::where('role', 'admin')->get();
+
+        if ($slotsLeft <= 0) {
+            $contextBooking = self::with(['user', 'tourSchedule.tour'])->where('tour_sched_id', $scheduleId)->latest()->first();
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\BookingNotification(
+                    $contextBooking, 
+                    'zero_slots', 
+                    "Tour {$schedule->tour->name} on " . \Carbon\Carbon::parse($schedule->date)->format('M d') . " is now FULL."
+                ));
+            }
+        } elseif ($slotsLeft <= 2) {
+            $contextBooking = self::with(['user', 'tourSchedule.tour'])->where('tour_sched_id', $scheduleId)->latest()->first();
+            foreach ($admins as $admin) {
+                $admin->notify(new \App\Notifications\BookingNotification(
+                    $contextBooking,
+                    'low_slots', 
+                    "Only {$slotsLeft} slots left for {$schedule->tour->name} on " . \Carbon\Carbon::parse($schedule->date)->format('M d') . "."
+                ));
+            }
+        }
     }
 }

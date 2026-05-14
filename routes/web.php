@@ -88,6 +88,14 @@ Route::middleware(['auth', 'can:isAdmin'])->prefix('admin')->name('admin.')->gro
     Route::patch('/bookings/{id}/status', [AdminController::class, 'updateBookingStatus'])->name('bookings.status');
     Route::get('/users',                  [AdminController::class, 'users'])->name('users');
     Route::get('/audit-logs/{type}',      [AdminController::class, 'getAuditLogs'])->name('audit_logs');
+
+    // Notifications
+    Route::get('/notifications', [AdminController::class, 'getNotifications'])->name('notifications.index');
+    Route::post('/notifications/mark-as-read', [AdminController::class, 'markNotificationsAsRead'])->name('notifications.markAsRead');
+
+    // Senior Validation
+    Route::get('/bookings/{id}/validate', [AdminController::class, 'showValidationPage'])->name('bookings.validate');
+    Route::post('/bookings/{id}/validate', [AdminController::class, 'validateSeniorBooking'])->name('bookings.validate.post');
 });
 
 

@@ -138,7 +138,12 @@
                             <div>
                                 <p class="text-gray-400 mb-0.5">Total</p>
                                 <p class="font-display font-bold text-amber-400 text-sm">
-                                    ₱{{ $tour ? number_format($tour->price * $booking->p_count, 2) : '—' }}
+                                    @php
+                                        $price = $tour->price ?? 0;
+                                        $regularCount = $booking->p_count - $booking->senior_count;
+                                        $total = ($regularCount * $price) + ($booking->senior_count * $price * 0.8);
+                                    @endphp
+                                    ₱{{ number_format($total, 2) }}
                                 </p>
                             </div>
                         </div>
@@ -149,8 +154,9 @@
                         <span class="px-3 py-1.5 rounded-full text-xs font-bold
                             {{ $booking->status === 'confirmed'  ? 'bg-jungle-100 text-jungle-700'  :
                                ($booking->status === 'pending'   ? 'bg-amber-100 text-amber-500'    :
-                               'bg-red-100 text-red-500') }}">
-                            {{ ucfirst($booking->status) }}
+                               ($booking->status === 'awaiting_validation' ? 'bg-orange-100 text-orange-500' :
+                               'bg-red-100 text-red-500')) }}">
+                            {{ $booking->status === 'awaiting_validation' ? 'Awaiting Validation' : ucfirst($booking->status) }}
                         </span>
 
                         <div class="flex items-center gap-3">
@@ -161,13 +167,17 @@
                                 <button type="submit"
                                         class="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all hover:shadow-lg"
                                         style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
-                                    Complete Payment
+                                    Proceed to Payment
                                 </button>
                             </form>
                             @endif
+
+                            @if($booking->status === 'awaiting_validation')
+                                <p class="text-[10px] text-gray-400 italic">Admin is verifying your Senior ID...</p>
+                            @endif
                             
-                            {{-- Cancel button (always visible unless already cancelled) --}}
-                            @if($booking->status !== 'cancelled')
+                            {{-- Cancel button --}}
+                            @if(!in_array($booking->status, ['cancelled', 'confirmed', 'rejected']))
                             <form method="POST" action="{{ route('client.bookings.cancel', $booking->id) }}"
                                   onsubmit="return confirm('Are you sure you want to cancel this booking?')">
                                 @csrf @method('PATCH')
