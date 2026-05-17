@@ -78,7 +78,7 @@
     <div class="xl:col-span-2 bg-white rounded-2xl card-shine border border-slate2 overflow-hidden">
         <div class="px-6 py-4 border-b border-slate2 flex items-center justify-between">
             <h2 class="font-display text-jungle-700 font-bold text-base">Recent Bookings</h2>
-            <a href="{{ route('admin.bookings') }}" class="text-xs text-amber-400 hover:text-amber-500 font-semibold">View all →</a>
+            <a href="{{ route('admin.bookings.index') }}" class="text-xs text-amber-400 hover:text-amber-500 font-semibold">View all →</a>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -118,25 +118,25 @@
     <div class="bg-white rounded-2xl card-shine border border-slate2 p-6">
         <h2 class="font-display text-jungle-700 font-bold text-base mb-5">Quick Actions</h2>
         <div class="space-y-3">
-            <a href="{{ route('tours.create') }}"
+            <a href="{{ route('admin.tours.create') }}"
                class="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 hover:translate-x-0.5"
                style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 Add New Tour
             </a>
-            <a href="{{ route('tour_schedules.create') }}"
+            <a href="{{ route('admin.tour_schedules.create') }}"
                class="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 hover:translate-x-0.5"
                style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 New Schedule
             </a>
-            <a href="{{ route('payments.index') }}"
+            <a href="{{ route('admin.payments.index') }}"
                class="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:translate-x-0.5"
                style="background:#f5ede6; color:#8b5e3c;">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
                 View Payments
             </a>
-            <a href="{{ route('admin.users') }}"
+            <a href="{{ route('admin.users.index') }}"
                class="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:translate-x-0.5"
                style="background:#f0f7f3; color:#1a3a2a;">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>

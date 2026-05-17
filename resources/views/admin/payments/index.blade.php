@@ -27,41 +27,53 @@
 </div>
 
 {{-- Filters --}}
-<form method="GET" action="{{ route('payments.index') }}" class="flex flex-wrap gap-3 mb-5">
-    <select name="tour_id"
-            class="px-3 py-2.5 rounded-xl border border-slate2 text-sm bg-white text-gray-600 focus:outline-none focus:border-jungle-500">
-        <option value="">All Tours</option>
-        @foreach($tours ?? [] as $tour)
-            <option value="{{ $tour->id }}" {{ request('tour_id') == $tour->id ? 'selected' : '' }}>
-                {{ $tour->name }}
-            </option>
-        @endforeach
-    </select>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <form method="GET" action="{{ route('admin.payments.index') }}" class="flex flex-wrap items-end gap-3">
+        <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Tour</label>
+            <select name="tour_id" class="px-3 py-2 rounded-xl border border-slate2 text-sm bg-white text-gray-600 focus:outline-none focus:border-jungle-500 min-w-[160px]">
+                <option value="">All Tours</option>
+                @foreach($tours ?? [] as $tour)
+                    <option value="{{ $tour->id }}" {{ request('tour_id') == $tour->id ? 'selected' : '' }}>{{ $tour->name }}</option>
+                @endforeach
+            </select>
+        </div>
 
-    <input type="date" name="date" value="{{ request('date') }}"
-           class="px-3 py-2.5 rounded-xl border border-slate2 text-sm bg-white text-gray-600 focus:outline-none focus:border-jungle-500">
+        <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Date</label>
+            <input type="date" name="date" value="{{ request('date') }}" class="px-3 py-2 rounded-xl border border-slate2 text-sm bg-white text-gray-600 focus:outline-none focus:border-jungle-500">
+        </div>
 
-    <select name="status"
-            class="px-3 py-2.5 rounded-xl border border-slate2 text-sm bg-white text-gray-600 focus:outline-none focus:border-jungle-500">
-        <option value="">All Status</option>
-        <option value="pending"   {{ request('status') === 'pending'   ? 'selected' : '' }}>Pending</option>
-        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
-        <option value="failed"    {{ request('status') === 'failed'    ? 'selected' : '' }}>Failed</option>
-    </select>
+        <div>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1 ml-1">Status</label>
+            <select name="status" class="px-3 py-2 rounded-xl border border-slate2 text-sm bg-white text-gray-600 focus:outline-none focus:border-jungle-500">
+                <option value="">All Status</option>
+                <option value="pending"   {{ request('status') === 'pending'   ? 'selected' : '' }}>Pending</option>
+                <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
+                <option value="failed"    {{ request('status') === 'failed'    ? 'selected' : '' }}>Failed</option>
+            </select>
+        </div>
 
-    <button type="submit"
-            class="px-4 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-colors"
-            style="background:#1a3a2a;">
-        Filter
-    </button>
+        <button type="submit" class="px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-colors h-[38px]" style="background:#1a3a2a;">
+            Filter
+        </button>
 
-    @if(request()->hasAny(['tour_id', 'date', 'status']))
-        <a href="{{ route('payments.index') }}"
-           class="px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-500 bg-white border border-slate2 hover:bg-gray-50 transition-colors">
-            Clear
+        @if(request()->hasAny(['tour_id', 'date', 'status']))
+            <a href="{{ route('admin.payments.index') }}" class="px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 bg-white border border-slate2 hover:bg-gray-50 transition-colors h-[38px] flex items-center">Clear</a>
+        @endif
+    </form>
+
+    <div class="flex items-center gap-2">
+        <a href="{{ route('admin.payments.archive') }}" class="px-4 py-2 rounded-xl text-sm font-semibold text-amber-500 bg-white border border-slate2 hover:bg-amber-50 transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            Archive
         </a>
-    @endif
-</form>
+        <a href="{{ route('admin.payments.export_pdf', request()->all()) }}" class="px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-all flex items-center gap-2" style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export PDF
+        </a>
+    </div>
+</div>
 
 {{-- Payments Table --}}
 <div class="bg-white rounded-2xl card-shine border border-slate2 overflow-hidden">
@@ -77,6 +89,7 @@
                     <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Amount</th>
                     <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
                     <th class="text-left px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Date Paid</th>
+                    <th class="text-right px-6 py-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate2">
@@ -152,10 +165,20 @@
                     <td class="px-6 py-4 text-gray-400 text-xs">
                         {{ $payment->created_at->format('M d, Y') }}
                     </td>
+
+                    {{-- Actions --}}
+                    <td class="px-6 py-4 text-right">
+                        <form method="POST" action="{{ route('admin.payments.archive.toggle', $payment->id) }}">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors" title="Archive Record">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                            </button>
+                        </form>
+                    </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="px-6 py-16 text-center">
+                    <td colspan="9" class="px-6 py-16 text-center">
                         <div class="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center"
                              style="background:#f9e3bb;">
                             <svg class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24"

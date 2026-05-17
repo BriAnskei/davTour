@@ -15,7 +15,8 @@ class Tour extends Model
         'description',
         'location',
         'price',
-        'status'
+        'status',
+        'is_archived'
     ];
 
     public function images()

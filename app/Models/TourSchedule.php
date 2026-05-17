@@ -14,6 +14,7 @@ class TourSchedule extends Model
         'tour_id',
         'date',
         'slots',
+        'is_archived',
     ];
 
     public function tour()

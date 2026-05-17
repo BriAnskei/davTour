@@ -1,245 +1,37 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $tour->name }} — DavaoTours</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        jungle: { DEFAULT: '#1a3a2a', 50: '#f0f7f3', 100: '#d6ece0', 500: '#2d6a4f', 700: '#1a3a2a' },
-                        amber:  { DEFAULT: '#c9872a', 100: '#f9e3bb', 300: '#e8a83c', 400: '#c9872a' },
-                        cream:  { DEFAULT: '#faf6f0' },
-                    },
-                    fontFamily: {
-                        display: ['Playfair Display', 'Georgia', 'serif'],
-                        body:    ['DM Sans', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'DM Sans', sans-serif; background: #faf6f0; }
-        .card-shine { box-shadow: 0 1px 3px rgba(26,58,42,.08), 0 4px 16px rgba(26,58,42,.06); }
+@extends('layouts.client')
 
-        /* Carousel Styles */
-        .carousel-container { position: relative; overflow: hidden; }
-        .carousel-track { display: flex; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
-        .carousel-slide { min-width: 100%; height: 100%; flex-shrink: 0; }
-        
-        /* Modal / Lightbox */
-        #lightbox {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            background: rgba(0,0,0,0.95);
-            backdrop-filter: blur(8px);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        #lightbox.open { display: flex; opacity: 1; }
+@section('title', $tour->name . ' — DavaoTours')
 
-        /* Auth dropdown */
-        #auth-dropdown {
-            transform: translateY(-8px);
-            opacity: 0;
-            pointer-events: none;
-            transition: all .22s cubic-bezier(.4,0,.2,1);
-        }
-        #auth-dropdown.open {
-            transform: translateY(0);
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .auth-input:focus {
-            outline: none;
-            border-color: #2d6a4f;
-            box-shadow: 0 0 0 3px rgba(45,106,79,.12);
-        }
+@push('styles')
+<style>
+    /* Carousel Styles */
+    .carousel-container { position: relative; overflow: hidden; }
+    .carousel-track { display: flex; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
+    .carousel-slide { min-width: 100%; height: 100%; flex-shrink: 0; }
+    
+    /* Modal / Lightbox */
+    #lightbox {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: rgba(0,0,0,0.95);
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    #lightbox.open { display: flex; opacity: 1; }
 
-        /* Gallery */
-        .thumb { transition: all .2s ease; }
-        .thumb.active { border-color: #c9872a; }
+    /* Gallery */
+    .thumb { transition: all .2s ease; }
+    .thumb.active { border-color: #c9872a; }
 
-        @keyframes fadeUp {
-            from { opacity:0; transform:translateY(10px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-        .fade-up { animation: fadeUp .4s ease forwards; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-    </style>
-</head>
-<body>
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+@endpush
 
-{{-- ===== NAVBAR ===== --}}
-<nav class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100"
-     style="box-shadow:0 1px 8px rgba(26,58,42,.07);">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="{{ route('client.index') }}" class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:#c9872a;">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
-                </svg>
-            </div>
-            <span class="font-display font-bold text-jungle-700 text-lg">DavaoTours</span>
-        </a>
-
-        <div class="flex items-center gap-3">
-            @auth
-                <span class="text-sm text-gray-500 hidden sm:block">Hi, <strong class="text-jungle-700">{{ Auth::user()->name }}</strong></span>
-                @if(Auth::user()->role === 'admin')
-                    <a href="{{ route('admin.dashboard') }}"
-                       class="px-4 py-2 rounded-xl text-xs font-semibold text-white" style="background:#1a3a2a;">
-                        Admin Panel →
-                    </a>
-                @else
-                    <a href="{{ route('client.bookings') }}"
-                       class="px-4 py-2 rounded-xl text-xs font-semibold" style="color:#1a3a2a; background:#d6ece0;">
-                        My Bookings
-                    </a>
-                @endif
-                <form method="POST" action="{{ route('logout') }}" class="inline">
-                    @csrf
-                    <button type="submit" class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">
-                        Logout
-                    </button>
-                </form>
-            @else
-                <div class="relative" id="auth-wrapper">
-                    <button id="auth-trigger" onclick="toggleAuthDropdown()"
-                            class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90"
-                            style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                        Sign In
-                        <svg id="auth-chevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                    </button>
-
-                    {{-- Auth Dropdown --}}
-                    <div id="auth-dropdown"
-                         class="absolute right-0 top-full mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-                        <div class="flex border-b border-gray-100 relative">
-                            <button onclick="switchTab('login')" id="tab-login"
-                                    class="flex-1 py-3.5 text-sm font-semibold transition-colors text-jungle-700">Sign In</button>
-                            <button onclick="switchTab('register')" id="tab-register"
-                                    class="flex-1 py-3.5 text-sm font-semibold transition-colors text-gray-400">Register</button>
-                            <div id="tab-bar" class="absolute bottom-0 left-0 h-0.5 w-1/2 transition-transform duration-200" style="background:#1a3a2a;"></div>
-                        </div>
-                        <div id="auth-message" class="hidden mx-4 mt-3 px-3 py-2.5 rounded-xl text-xs font-medium"></div>
-                        {{-- Login --}}
-                        <div id="panel-login" class="p-5">
-                            <form id="form-login" onsubmit="submitLogin(event)" class="space-y-3.5">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Email</label>
-                                    <input type="email" name="email" id="login-email" placeholder="you@example.com"
-                                           class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm transition-all">
-                                    <p id="err-login-email" class="text-red-400 text-xs mt-1 hidden"></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Password</label>
-                                    <div class="relative">
-                                        <input type="password" id="login-password" placeholder="••••••••"
-                                               class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm transition-all pr-10">
-                                        <button type="button" onclick="toggleVis('login-password')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <button type="submit" id="btn-login"
-                                        class="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 mt-1"
-                                        style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">Sign In</button>
-
-                                <div class="relative py-2 flex items-center">
-                                    <div class="flex-grow border-t border-gray-100"></div>
-                                    <span class="flex-shrink mx-3 text-[10px] font-bold text-gray-300 uppercase tracking-widest">OR</span>
-                                    <div class="flex-grow border-t border-gray-100"></div>
-                                </div>
-
-                                <a href="{{ route('google.login') }}" 
-                                   class="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24">
-                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                                    </svg>
-                                    Continue with Google
-                                </a>
-                            </form>
-                        </div>
-                        {{-- Register --}}
-                        <div id="panel-register" class="p-5 hidden">
-                            <form id="form-register" onsubmit="submitRegister(event)" class="space-y-3">
-                                @csrf
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Full Name</label>
-                                    <input type="text" id="reg-name" placeholder="Juan dela Cruz"
-                                           class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm">
-                                    <p id="err-reg-name" class="text-red-400 text-xs mt-1 hidden"></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Email</label>
-                                    <input type="email" id="reg-email" placeholder="you@example.com"
-                                           class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm">
-                                    <p id="err-reg-email" class="text-red-400 text-xs mt-1 hidden"></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Contact <span class="text-gray-400 font-normal">(optional)</span></label>
-                                    <input type="text" id="reg-contact" placeholder="09XX XXX XXXX"
-                                           class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Password</label>
-                                    <input type="password" id="reg-password" placeholder="Min. 6 characters"
-                                           class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm">
-                                    <p id="err-reg-password" class="text-red-400 text-xs mt-1 hidden"></p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-gray-500 mb-1">Confirm Password</label>
-                                    <input type="password" id="reg-confirm" placeholder="Re-enter password"
-                                           class="auth-input w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm">
-                                </div>
-                                <button type="submit" id="btn-register"
-                                        class="w-full py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 mt-1"
-                                        style="background: linear-gradient(135deg,#c9872a,#e8a83c);">Create Account</button>
-
-                                <div class="relative py-2 flex items-center">
-                                    <div class="flex-grow border-t border-gray-100"></div>
-                                    <span class="flex-shrink mx-3 text-[10px] font-bold text-gray-300 uppercase tracking-widest">OR</span>
-                                    <div class="flex-grow border-t border-gray-100"></div>
-                                </div>
-
-                                <a href="{{ route('google.login') }}" 
-                                   class="w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-all">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24">
-                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                                    </svg>
-                                    Sign up with Google
-                                </a>
-                            </form>
-                        </div>
-                        <div class="px-5 pb-4 text-center">
-                            <p class="text-xs text-gray-400">By signing in, you agree to our <span class="text-jungle-700 font-medium">Terms of Service</span></p>
-                        </div>
-                    </div>
-                </div>
-            @endauth
-        </div>
-    </div>
-</nav>
-
-{{-- ===== MAIN CONTENT ===== --}}
+@section('content')
 <div class="max-w-7xl mx-auto px-6 py-10">
 
     {{-- Back link --}}
@@ -448,10 +240,6 @@
     </div>
 </div>
 
-<footer class="mt-16 py-8 border-t border-gray-200 text-center text-xs text-gray-400">
-    © {{ date('Y') }} DavaoTours — Proudly showcasing Davao City, Philippines 🇵🇭
-</footer>
-
 {{-- ===== LIGHTBOX MODAL ===== --}}
 <div id="lightbox" onclick="closeLightbox()" class="items-center justify-center p-4">
     <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white/70 hover:text-white transition-colors">
@@ -459,10 +247,10 @@
     </button>
     <img id="lightbox-img" class="max-w-full max-h-full rounded-2xl shadow-2xl transition-transform duration-300 scale-95" src="" alt="Full View">
 </div>
+@endsection
 
+@push('scripts')
 <script>
-const CSRF = document.querySelector('meta[name="csrf-token"]').content;
-
 // Carousel Logic
 let currentSlide = 0;
 const totalSlides = {{ $tour->images->count() }};
@@ -526,14 +314,6 @@ function goToSlide(index) {
 // Initial AutoPlay
 startAutoPlay();
 
-// Pause on Interaction
-if (container) {
-    container.addEventListener('mouseenter', stopAutoPlay);
-    container.addEventListener('mouseleave', startAutoPlay);
-    container.addEventListener('touchstart', stopAutoPlay, {passive: true});
-    container.addEventListener('touchend', startAutoPlay, {passive: true});
-}
-
 // Swipe Support
 let touchStartX = 0;
 let touchEndX = 0;
@@ -547,8 +327,8 @@ if (track) {
 }
 
 function handleSwipe() {
-    if (touchStartX - touchEndX > 50) moveSlide(1);  // Swipe left
-    if (touchEndX - touchStartX > 50) moveSlide(-1); // Swipe right
+    if (touchStartX - touchEndX > 50) moveSlide(1);
+    if (touchEndX - touchStartX > 50) moveSlide(-1);
 }
 
 // Lightbox Logic
@@ -573,146 +353,5 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight') moveSlide(1);
     if (e.key === 'Escape') closeLightbox();
 });
-
-// Auth dropdown
-function toggleAuthDropdown() {
-    const dropdown = document.getElementById('auth-dropdown');
-    const chevron  = document.getElementById('auth-chevron');
-    if (!dropdown) return;
-    dropdown.classList.toggle('open');
-    if (chevron) chevron.style.transform = dropdown.classList.contains('open') ? 'rotate(180deg)' : '';
-}
-
-document.addEventListener('click', function(e) {
-    const wrapper = document.getElementById('auth-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-        const dropdown = document.getElementById('auth-dropdown');
-        if (dropdown) dropdown.classList.remove('open');
-        const chevron = document.getElementById('auth-chevron');
-        if (chevron) chevron.style.transform = '';
-    }
-});
-
-function switchTab(tab) {
-    const isLogin = tab === 'login';
-    document.getElementById('panel-login').classList.toggle('hidden', !isLogin);
-    document.getElementById('panel-register').classList.toggle('hidden', isLogin);
-    document.getElementById('tab-login').className    = `flex-1 py-3.5 text-sm font-semibold transition-colors ${isLogin ? 'text-jungle-700' : 'text-gray-400'}`;
-    document.getElementById('tab-register').className = `flex-1 py-3.5 text-sm font-semibold transition-colors ${!isLogin ? 'text-jungle-700' : 'text-gray-400'}`;
-    document.getElementById('tab-bar').style.transform = isLogin ? 'translateX(0)' : 'translateX(100%)';
-    clearMessage();
-}
-
-function showMessage(msg, type = 'error') {
-    const el = document.getElementById('auth-message');
-    el.classList.remove('hidden', 'bg-red-50', 'text-red-600', 'border-red-200', 'bg-jungle-50', 'text-jungle-700', 'border-jungle-100');
-    el.classList.add(type === 'error' ? 'bg-red-50' : 'bg-jungle-50', type === 'error' ? 'text-red-600' : 'text-jungle-700', 'border', type === 'error' ? 'border-red-200' : 'border-jungle-100');
-    el.textContent = msg;
-}
-
-function clearMessage() {
-    const el = document.getElementById('auth-message');
-    el.classList.add('hidden');
-    el.textContent = '';
-}
-
-function showFieldError(id, msg) {
-    const el = document.getElementById(id);
-    if (el) { el.textContent = msg; el.classList.remove('hidden'); }
-}
-
-function toggleVis(id) {
-    const input = document.getElementById(id);
-    input.type = input.type === 'password' ? 'text' : 'password';
-}
-
-function setLoading(btnId, loading) {
-    const btn = document.getElementById(btnId);
-    btn.disabled = loading;
-    btn.style.opacity = loading ? '0.7' : '1';
-    btn.textContent = loading ? 'Please wait...' : (btnId === 'btn-login' ? 'Sign In' : 'Create Account');
-}
-
-async function submitLogin(e) {
-    e.preventDefault();
-    clearMessage();
-    setLoading('btn-login', true);
-    const data = new FormData();
-    data.append('email',    document.getElementById('login-email').value);
-    data.append('password', document.getElementById('login-password').value);
-    data.append('_token',   CSRF);
-    try {
-        const res  = await fetch('{{ route("login.post") }}', { method: 'POST', body: data });
-        const json = await res.json();
-        if (json.success) {
-            window.location.href = json.redirect;
-        } else {
-            showMessage(json.message || 'Login failed.');
-        }
-    } catch { showMessage('Something went wrong.'); }
-    finally { setLoading('btn-login', false); }
-}
-
-async function submitRegister(e) {
-    e.preventDefault();
-    clearMessage();
-    setLoading('btn-register', true);
-    const data = new FormData();
-    data.append('name',                  document.getElementById('reg-name').value);
-    data.append('email',                 document.getElementById('reg-email').value);
-    data.append('contact_number',        document.getElementById('reg-contact').value);
-    data.append('password',              document.getElementById('reg-password').value);
-    data.append('password_confirmation', document.getElementById('reg-confirm').value);
-    data.append('_token',                CSRF);
-    try {
-        const res  = await fetch('{{ route("register.post") }}', { method: 'POST', body: data });
-        const json = await res.json();
-        if (json.success) {
-            window.location.href = json.redirect;
-        } else if (json.errors) {
-            if (json.errors.name)     showFieldError('err-reg-name',     json.errors.name[0]);
-            if (json.errors.email)    showFieldError('err-reg-email',    json.errors.email[0]);
-            if (json.errors.password) showFieldError('err-reg-password', json.errors.password[0]);
-        } else {
-            showMessage(json.message || 'Registration failed.');
-        }
-    } catch { showMessage('Something went wrong.'); }
-    finally { setLoading('btn-register', false); }
-}
 </script>
-
-{{-- Conflict Rejection Modal --}}
-@if(session('conflict_booking'))
-<div id="conflict-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-    <div class="absolute inset-0 bg-jungle-700/40 backdrop-blur-sm"></div>
-    <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-[fadeUp_0.3s_ease-out] border border-gray-100">
-        <div class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
-            <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 17c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-        </div>
-        
-        <h3 class="font-display font-bold text-jungle-700 text-2xl mb-2">Scheduling Conflict</h3>
-        <p class="text-gray-500 text-sm leading-relaxed mb-6">
-            You already have a confirmed booking for <strong class="text-jungle-700">{{ session('conflict_booking')['date'] }}</strong> 
-            (<span class="text-amber-400 font-medium">{{ session('conflict_booking')['tour_name'] }}</span>). 
-            Please choose a different date or manage your existing schedules.
-        </p>
-
-        <div class="flex flex-col gap-3">
-            <a href="{{ route('client.bookings') }}" 
-               class="w-full py-3.5 rounded-xl text-sm font-bold text-white text-center transition-all hover:shadow-lg"
-               style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
-                View My Bookings
-            </a>
-            <button onclick="document.getElementById('conflict-modal').remove()" 
-                    class="w-full py-3.5 rounded-xl text-sm font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors">
-                Close
-            </button>
-        </div>
-    </div>
-</div>
-@endif
-
-</body>
-</html>
+@endpush

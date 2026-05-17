@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Tour;
 use App\Models\TourImage;
+use App\Models\TourBooking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +20,13 @@ class TourController extends Controller
     // ─────────────────────────────────────────
     public function index(Request $request)
     {
-        $query = Tour::with('images');
+        $query = Tour::with('images')->where('is_archived', false);
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%')
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
                   ->orWhere('location', 'like', '%' . $request->search . '%');
+            });
         }
 
         if ($request->filled('status')) {
@@ -33,6 +36,60 @@ class TourController extends Controller
         $tours = $query->latest()->paginate(9);
 
         return view('admin.tours.index', compact('tours'));
+    }
+
+    public function archivedTours(Request $request)
+    {
+        $query = Tour::with('images')->where('is_archived', true);
+
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('location', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $tours = $query->latest()->paginate(9);
+
+        return view('admin.tours.archive', compact('tours'));
+    }
+
+    public function toggleArchive($id)
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        $tour = Tour::findOrFail($id);
+
+        // Check if we are trying to archive (not restore)
+        if (!$tour->is_archived) {
+            // Check for active upcoming bookings
+            $hasActiveBookings = $tour->bookings()
+                ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_CONFIRMED, TourBooking::STATUS_AWAITING_VALIDATION])
+                ->whereHas('tourSchedule', function($q) {
+                    $q->where('date', '>=', today());
+                })
+                ->exists();
+
+            if ($hasActiveBookings) {
+                return back()->with('error', 'Cannot archive this tour because it has active upcoming bookings. Please cancel or complete them first.');
+            }
+        }
+
+        $tour->update(['is_archived' => !$tour->is_archived]);
+
+        // When a tour is archived, we also archive all its schedules (and their bookings)
+        if ($tour->is_archived) {
+            $schedules = $tour->schedules;
+            foreach ($schedules as $schedule) {
+                $schedule->update(['is_archived' => true]);
+                $schedule->bookings()->update(['is_archived' => true]);
+            }
+        }
+
+        $message = $tour->is_archived ? 'Tour and its schedules archived.' : 'Tour restored.';
+        return back()->with('success', $message);
     }
 
     // ─────────────────────────────────────────
@@ -106,7 +163,7 @@ class TourController extends Controller
         }
 
         DB::commit();
-        return redirect()->route('tours.index')->with('success', 'Tour created successfully!');
+        return redirect()->route('admin.tours.index')->with('success', 'Tour created successfully!');
 
     } catch (\Exception $e) {
         DB::rollBack();
@@ -185,7 +242,7 @@ class TourController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('tours.index')->with('success', 'Tour updated successfully!');
+            return redirect()->route('admin.tours.index')->with('success', 'Tour updated successfully!');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -215,7 +272,7 @@ class TourController extends Controller
 
         $tour->delete();
 
-        return redirect()->route('tours.index')->with('success', 'Tour deleted successfully.');
+        return redirect()->route('admin.tours.index')->with('success', 'Tour deleted successfully.');
     }
 
     // ─────────────────────────────────────────

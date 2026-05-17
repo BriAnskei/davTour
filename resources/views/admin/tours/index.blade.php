@@ -9,11 +9,16 @@
 {{-- Header Actions --}}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div class="flex gap-2">
-        <a href="{{ route('tours.create') }}"
+        <a href="{{ route('admin.tours.create') }}"
            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 hover:shadow-lg"
            style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             Add New Tour
+        </a>
+        <a href="{{ route('admin.tours.archive') }}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-amber-500 bg-white border border-slate2 transition-all hover:bg-amber-50">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            Archived Tours
         </a>
         <button type="button"
                 onclick="openAuditLogModal('tours')"
@@ -23,7 +28,7 @@
         </button>
     </div>
     {{-- Search --}}
-    <form method="GET" action="{{ route('tours.index') }}" class="flex items-center gap-2">
+    <form method="GET" action="{{ route('admin.tours.index') }}" class="flex items-center gap-2">
         <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             <input type="text" name="search" value="{{ request('search') }}"
@@ -96,23 +101,30 @@
                     <p class="font-display font-bold text-amber-400 text-lg">₱{{ number_format($tour->price, 2) }}</p>
                 </div>
                 <div class="flex items-center gap-1.5">
+                    {{-- Archive --}}
+                    <form method="POST" action="{{ route('admin.tours.archive.toggle', $tour->id) }}">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-50 transition-colors" title="Archive">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                        </button>
+                    </form>
                     {{-- View --}}
-                    <a href="{{ route('tours.show', $tour->id) }}"
+                    <a href="{{ route('admin.tours.show', $tour->id) }}"
                        class="w-8 h-8 rounded-lg flex items-center justify-center text-jungle-500 hover:bg-jungle-50 transition-colors" title="View">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                     </a>
                     {{-- Schedules --}}
-                    <a href="{{ route('tour_schedules.index', ['tour_id' => $tour->id]) }}"
+                    <a href="{{ route('admin.tour_schedules.index', ['tour_id' => $tour->id]) }}"
                        class="w-8 h-8 rounded-lg flex items-center justify-center text-amber-400 hover:bg-amber-50 transition-colors" title="Schedules">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                     </a>
                     {{-- Edit --}}
-                    <a href="{{ route('tours.edit', $tour->id) }}"
+                    <a href="{{ route('admin.tours.edit', $tour->id) }}"
                        class="w-8 h-8 rounded-lg flex items-center justify-center text-blue-400 hover:bg-blue-50 transition-colors" title="Edit">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </a>
                     {{-- Toggle Status --}}
-                    <form method="POST" action="{{ route('tours.toggle', $tour->id) }}">
+                    <form method="POST" action="{{ route('admin.tours.toggle', $tour->id) }}">
                         @csrf @method('PATCH')
                         <button type="submit"
                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors {{ $tour->status === 'active' ? 'text-orange-400 hover:bg-orange-50' : 'text-green-400 hover:bg-green-50' }}"
@@ -121,7 +133,7 @@
                         </button>
                     </form>
                     {{-- Delete --}}
-                    <form method="POST" action="{{ route('tours.destroy', $tour->id) }}"
+                    <form method="POST" action="{{ route('admin.tours.destroy', $tour->id) }}"
                           onsubmit="return confirm('Delete this tour and all its images? This cannot be undone.')">
                         @csrf @method('DELETE')
                         <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors" title="Delete">
@@ -150,7 +162,7 @@
     </div>
     <h3 class="font-display text-jungle-700 font-bold text-lg mb-2">No tours yet</h3>
     <p class="text-gray-400 text-sm mb-6">Start by adding your first Davao City tour.</p>
-    <a href="{{ route('tours.create') }}"
+    <a href="{{ route('admin.tours.create') }}"
        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
        style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>

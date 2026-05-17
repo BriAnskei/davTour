@@ -1,73 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Bookings — DavaoTours</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        jungle: { DEFAULT: '#1a3a2a', 50: '#f0f7f3', 100: '#d6ece0', 500: '#2d6a4f', 700: '#1a3a2a' },
-                        amber:  { DEFAULT: '#c9872a', 100: '#f9e3bb', 400: '#c9872a' },
-                        cream:  { DEFAULT: '#faf6f0' },
-                    },
-                    fontFamily: {
-                        display: ['Playfair Display', 'Georgia', 'serif'],
-                        body:    ['DM Sans', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'DM Sans', sans-serif; background: #faf6f0; }
-        .card-shine { box-shadow: 0 1px 3px rgba(26,58,42,.08), 0 4px 16px rgba(26,58,42,.06); }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        .fade-up { animation: fadeUp .4s ease both; }
-    </style>
-</head>
-<body>
+@extends('layouts.client')
 
-{{-- Navbar --}}
-<nav class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100"
-     style="box-shadow:0 1px 8px rgba(26,58,42,.07);">
-    <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="{{ route('client.index') }}" class="flex items-center gap-2.5">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:#c9872a;">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
-                </svg>
-            </div>
-            <span class="font-display font-bold text-jungle-700 text-lg">DavaoTours</span>
-        </a>
-        <div class="flex items-center gap-3">
-            <span class="text-sm text-gray-500 hidden sm:block">
-                Hi, <strong class="text-jungle-700">{{ Auth::user()->name }}</strong>
-            </span>
-            <a href="{{ route('client.index') }}"
-               class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">
-                Browse Tours
-            </a>
-            <form method="POST" action="{{ route('logout') }}" class="inline">
-                @csrf
-                <button type="submit"
-                        class="px-4 py-2 rounded-xl text-xs font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-colors">
-                    Logout
-                </button>
-            </form>
-        </div>
-    </div>
-</nav>
+@section('title', 'My Bookings — DavaoTours')
 
+@section('content')
 <div class="max-w-4xl mx-auto px-6 py-10">
 
     <div class="mb-8 fade-up">
         <h1 class="font-display text-jungle-700 text-3xl font-bold">My Bookings</h1>
         <p class="text-gray-400 text-sm mt-1">Your tour reservation history</p>
+    </div>
+
+    {{-- Tabs --}}
+    <div class="flex gap-4 mb-6 fade-up">
+        <a href="{{ route('client.bookings', ['tab' => 'upcoming']) }}"
+           class="px-4 py-2 rounded-xl text-sm font-bold transition-all {{ $tab === 'upcoming' ? 'bg-jungle-700 text-white' : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50' }}">
+            Upcoming Bookings
+        </a>
+        <a href="{{ route('client.bookings', ['tab' => 'past']) }}"
+           class="px-4 py-2 rounded-xl text-sm font-bold transition-all {{ $tab === 'past' ? 'bg-jungle-700 text-white' : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50' }}">
+            Past History
+        </a>
     </div>
 
     {{-- Flash Messages --}}
@@ -160,6 +112,12 @@
                         </span>
 
                         <div class="flex items-center gap-3">
+                            {{-- Details Button --}}
+                            <a href="{{ route('client.bookings.show', $booking->id) }}"
+                               class="px-4 py-2 rounded-xl text-xs font-bold border border-gray-100 hover:bg-gray-50 transition-all">
+                                View Details
+                            </a>
+
                             {{-- Resume Payment button (pending only) --}}
                             @if($booking->status === 'pending')
                             <form method="POST" action="{{ route('client.payment.resume', $booking->id) }}">
@@ -221,39 +179,4 @@
     @endif
 
 </div>
-
-<footer class="mt-16 py-8 border-t border-gray-200 text-center text-xs text-gray-400">
-    © {{ date('Y') }} DavaoTours — Proudly showcasing Davao City, Philippines 🇵🇭
-</footer>
-
-{{-- Conflict Rejection Modal --}}
-@if(session('conflict_booking'))
-<div id="conflict-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4">
-    <div class="absolute inset-0 bg-jungle-700/40 backdrop-blur-sm"></div>
-    <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-[fadeUp_0.3s_ease-out] border border-gray-100">
-        <div class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
-            <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.268 17c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-        </div>
-        
-        <h3 class="font-display font-bold text-jungle-700 text-2xl mb-2">Scheduling Conflict</h3>
-        <p class="text-gray-500 text-sm leading-relaxed mb-6">
-            You already have a confirmed booking for <strong class="text-jungle-700">{{ session('conflict_booking')['date'] }}</strong> 
-            (<span class="text-amber-400 font-medium">{{ session('conflict_booking')['tour_name'] }}</span>). 
-            Please choose a different date or manage your existing schedules.
-        </p>
-
-        <div class="flex flex-col gap-3">
-            <button onclick="document.getElementById('conflict-modal').remove()" 
-                    class="w-full py-3.5 rounded-xl text-sm font-bold text-white text-center transition-all hover:shadow-lg"
-                    style="background: linear-gradient(135deg,#c9872a,#e8a83c);">
-                I Understand
-            </button>
-        </div>
-    </div>
-</div>
-@endif
-
-</body>
-</html>
+@endsection

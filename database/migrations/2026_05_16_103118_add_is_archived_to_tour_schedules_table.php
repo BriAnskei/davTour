@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tour_bookings', function (Blueprint $table) {
-            $table->text('rejection_reason')->nullable()->after('status');
+        Schema::table('tour_schedules', function (Blueprint $table) {
+            $table->boolean('is_archived')->default(false)->after('slots');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tour_bookings', function (Blueprint $table) {
-            $table->dropColumn('rejection_reason');
+        Schema::table('tour_schedules', function (Blueprint $table) {
+            $table->dropColumn('is_archived');
         });
     }
 };

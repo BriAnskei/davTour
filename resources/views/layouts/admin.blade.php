@@ -88,16 +88,16 @@
 
         <p class="text-white/30 text-xs font-semibold uppercase tracking-widest px-3 mt-4 mb-2">Tours</p>
 
-        <a href="{{ route('tours.index') }}"
-           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('tours.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.tours.index') }}"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.tours.*') ? 'active' : '' }}">
             <svg class="nav-icon w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
             </svg>
             Tours
         </a>
 
-        <a href="{{ route('tour_schedules.index') }}"
-           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('tour_schedules.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.tour_schedules.index') }}"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.tour_schedules.*') ? 'active' : '' }}">
             <svg class="nav-icon w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
             </svg>
@@ -106,16 +106,16 @@
 
         <p class="text-white/30 text-xs font-semibold uppercase tracking-widest px-3 mt-4 mb-2">Operations</p>
 
-        <a href="{{ route('admin.bookings') }}"
-           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.bookings') ? 'active' : '' }}">
+        <a href="{{ route('admin.bookings.index') }}"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.bookings.*') ? 'active' : '' }}">
             <svg class="nav-icon w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
             Bookings
         </a>
 
-        <a href="{{ route('payments.index') }}"
-           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('payments.*') ? 'active' : '' }}">
+        <a href="{{ route('admin.payments.index') }}"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}">
             <svg class="nav-icon w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
             </svg>
@@ -124,8 +124,8 @@
 
         <p class="text-white/30 text-xs font-semibold uppercase tracking-widest px-3 mt-4 mb-2">System</p>
 
-        <a href="{{ route('admin.users') }}"
-           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.users') ? 'active' : '' }}">
+        <a href="{{ route('admin.users.index') }}"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 text-sm {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
             <svg class="nav-icon w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
             </svg>
@@ -251,7 +251,7 @@
                         const date = new Date(n.created_at);
                         const formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         
-                        let url = '{{ route("admin.bookings") }}';
+                        let url = '{{ route("admin.bookings.index") }}';
                         if (n.data.type === 'senior_validation') {
                             url = '{{ url("/admin/bookings") }}/' + n.data.booking_id + '/validate';
                         }

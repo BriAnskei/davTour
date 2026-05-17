@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\TourSchedule;   // ← fixed typo (was TourSchdule)
 use App\Models\Tour;
+use App\Models\TourBooking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,7 +17,8 @@ class TourScheduleController extends Controller
     // ─────────────────────────────────────────
     public function index(Request $request)
     {
-        $query = TourSchedule::with(['tour', 'bookings']);
+        $query = TourSchedule::with(['tour', 'bookings'])
+            ->where('is_archived', false);
 
         // Filter by tour
         if ($request->filled('tour_id')) {
@@ -32,6 +34,52 @@ class TourScheduleController extends Controller
         $tours     = Tour::orderBy('name')->get(); // for filter dropdown
 
         return view('admin.schedules.index', compact('schedules', 'tours'));
+    }
+
+    public function archivedSchedules(Request $request)
+    {
+        $query = TourSchedule::with(['tour', 'bookings'])
+            ->where('is_archived', true);
+
+        // Filter by tour
+        if ($request->filled('tour_id')) {
+            $query->where('tour_id', $request->tour_id);
+        }
+
+        $schedules = $query->orderBy('date', 'desc')->paginate(15);
+        $tours     = Tour::orderBy('name')->get();
+
+        return view('admin.schedules.archive', compact('schedules', 'tours'));
+    }
+
+    public function toggleArchive($id)
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        $schedule = TourSchedule::findOrFail($id);
+
+        // Check if we are trying to archive
+        if (!$schedule->is_archived) {
+            $hasActiveBookings = $schedule->bookings()
+                ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_CONFIRMED, TourBooking::STATUS_AWAITING_VALIDATION])
+                ->exists();
+
+            if ($hasActiveBookings) {
+                return back()->with('error', 'Cannot archive this schedule because it has active bookings. Please cancel or complete them first.');
+            }
+        }
+
+        $schedule->update(['is_archived' => !$schedule->is_archived]);
+
+        // When a schedule is archived, we also archive all its bookings
+        if ($schedule->is_archived) {
+            $schedule->bookings()->update(['is_archived' => true]);
+        }
+
+        $message = $schedule->is_archived ? 'Schedule and its bookings archived.' : 'Schedule restored.';
+        return back()->with('success', $message);
     }
 
     // ─────────────────────────────────────────
@@ -73,7 +121,7 @@ class TourScheduleController extends Controller
 
         TourSchedule::create($request->only(['tour_id', 'date', 'slots']));
 
-        return redirect()->route('tour_schedules.index')
+        return redirect()->route('admin.tour_schedules.index')
             ->with('success', 'Schedule created successfully.');
     }
 
@@ -119,7 +167,7 @@ class TourScheduleController extends Controller
 
         $schedule->update($request->only(['tour_id', 'date', 'slots']));
 
-        return redirect()->route('tour_schedules.index')
+        return redirect()->route('admin.tour_schedules.index')
             ->with('success', 'Schedule updated successfully.');
     }
 
@@ -135,7 +183,7 @@ class TourScheduleController extends Controller
         $schedule = TourSchedule::findOrFail($id);
         $schedule->delete();
 
-        return redirect()->route('tour_schedules.index')
+        return redirect()->route('admin.tour_schedules.index')
             ->with('success', 'Schedule deleted successfully.');
     }
 }

@@ -7,7 +7,7 @@
 @section('content')
 <div class="max-w-4xl">
     {{-- Back Link --}}
-    <a href="{{ route('admin.bookings') }}" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-jungle-500 transition-colors mb-6">
+    <a href="{{ route('admin.bookings.index') }}" class="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-jungle-500 transition-colors mb-6">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         Back to Bookings
     </a>
@@ -45,28 +45,49 @@
                 
                 <form action="{{ route('admin.bookings.validate.post', $booking->id) }}" method="POST" class="space-y-4">
                     @csrf
+
+                    @if($errors->any())
+                        <div class="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs">
+                            <ul class="list-disc list-inside">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-2">Decision</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="action" value="approve" class="peer sr-only" checked onchange="toggleReason(false)">
-                                <div class="px-4 py-3 rounded-xl border border-slate2 text-center text-xs font-bold text-gray-500 peer-checked:border-jungle-500 peer-checked:bg-jungle-50 peer-checked:text-jungle-700 transition-all">
-                                    Approve
-                                </div>
+                        
+                        {{-- Hidden Radios as Peers --}}
+                        <input type="radio" name="action" value="approve" id="approve-radio" class="peer/approve sr-only" {{ old('action', $booking->status) !== 'rejected' ? 'checked' : '' }}>
+                        <input type="radio" name="action" value="reject" id="reject-radio" class="peer/reject sr-only" {{ old('action', $booking->status) === 'rejected' ? 'checked' : '' }}>
+
+                        <div class="grid grid-cols-2 gap-2 mb-4">
+                            <label for="approve-radio" class="block px-4 py-3 rounded-xl border border-slate2 text-center text-xs font-bold text-gray-500 cursor-pointer peer-checked/approve:border-jungle-500 peer-checked/approve:bg-jungle-50 peer-checked/approve:text-jungle-700 transition-all">
+                                Approve
                             </label>
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="action" value="reject" class="peer sr-only" onchange="toggleReason(true)">
-                                <div class="px-4 py-3 rounded-xl border border-slate2 text-center text-xs font-bold text-gray-500 peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:text-red-700 transition-all">
-                                    Reject
-                                </div>
+                            <label for="reject-radio" class="block px-4 py-3 rounded-xl border border-slate2 text-center text-xs font-bold text-gray-500 cursor-pointer peer-checked/reject:border-red-500 peer-checked/reject:bg-red-50 peer-checked:text-red-700 transition-all">
+                                Reject
                             </label>
                         </div>
-                    </div>
 
-                    <div id="reason-container" class="hidden">
-                        <label class="block text-xs font-semibold text-gray-600 mb-2">Reason for Rejection</label>
-                        <textarea name="reason" rows="3" placeholder="e.g. Invalid ID, Expired ID..."
-                                  class="w-full px-4 py-3 rounded-xl border border-slate2 text-xs focus:outline-none focus:border-red-500"></textarea>
+                        {{-- Reason Container: Shown only when Reject is checked --}}
+                        <div class="hidden peer-checked/reject:block space-y-4 pt-2 border-t border-slate2 mt-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-2">Reason for Rejection</label>
+                                <select id="predefined-reason" class="w-full px-4 py-3 rounded-xl border border-slate2 text-xs mb-2 focus:outline-none focus:border-red-500" onchange="updateReasonText(this.value)">
+                                    <option value="">-- Select a reason --</option>
+                                    <option value="ID photo is blurry or unreadable.">Blurry Image</option>
+                                    <option value="Invalid ID type (not a Senior Citizen ID).">Invalid ID Type</option>
+                                    <option value="Name on ID does not match account name.">Name Mismatch</option>
+                                    <option value="Senior Citizen count mismatch.">Count Mismatch</option>
+                                    <option value="Other">Other (Type below)</option>
+                                </select>
+                                <textarea id="reason-text" name="reason" rows="3" placeholder="Additional details..."
+                                          class="w-full px-4 py-3 rounded-xl border border-slate2 text-xs focus:outline-none focus:border-red-500">{{ old('reason', $booking->rejection_reason) }}</textarea>
+                            </div>
+                        </div>
                     </div>
 
                     <button type="submit" class="w-full py-3 rounded-xl bg-jungle-700 text-white text-xs font-bold hover:bg-jungle-800 transition-all shadow-md">
@@ -117,12 +138,13 @@
 
 @push('scripts')
 <script>
-    function toggleReason(show) {
-        const container = document.getElementById('reason-container');
-        if (show) {
-            container.classList.remove('hidden');
-        } else {
-            container.classList.add('hidden');
+    function updateReasonText(value) {
+        const textarea = document.getElementById('reason-text');
+        if (value === 'Other') {
+            textarea.value = '';
+            textarea.focus();
+        } else if (value !== '') {
+            textarea.value = value;
         }
     }
 

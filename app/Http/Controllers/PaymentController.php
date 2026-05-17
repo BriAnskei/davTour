@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeSession;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaymentController extends Controller
 {
@@ -21,7 +22,7 @@ class PaymentController extends Controller
         $query = Payment::with([
             'booking.user',
             'booking.tourSchedule.tour',
-        ]);
+        ])->where('is_archived', false);
 
         if ($request->filled('tour_id')) {
             $query->whereHas('booking.tourSchedule.tour', fn($q) =>
@@ -38,9 +39,9 @@ class PaymentController extends Controller
         }
 
         $payments     = $query->latest()->paginate(15);
-        $totalRevenue = Payment::where('payment_status', 'completed')->sum('amount');
-        $pendingCount = Payment::where('payment_status', 'pending')->count();
-        $todayRevenue = Payment::where('payment_status', 'completed')
+        $totalRevenue = Payment::where('is_archived', false)->where('payment_status', 'completed')->sum('amount');
+        $pendingCount = Payment::where('is_archived', false)->where('payment_status', 'pending')->count();
+        $todayRevenue = Payment::where('is_archived', false)->where('payment_status', 'completed')
                             ->whereDate('created_at', today())
                             ->sum('amount');
         $tours = Tour::orderBy('name')->get();
@@ -48,6 +49,77 @@ class PaymentController extends Controller
         return view('admin.payments.index', compact(
             'payments', 'totalRevenue', 'pendingCount', 'todayRevenue', 'tours'
         ));
+    }
+
+    public function archivedPayments(Request $request)
+    {
+        $query = Payment::with([
+            'booking.user',
+            'booking.tourSchedule.tour',
+        ])->where('is_archived', true);
+
+        if ($request->filled('tour_id')) {
+            $query->whereHas('booking.tourSchedule.tour', fn($q) =>
+                $q->where('id', $request->tour_id)
+            );
+        }
+
+        $payments = $query->latest()->paginate(15);
+        $tours    = Tour::orderBy('name')->get();
+
+        return view('admin.payments.archive', compact('payments', 'tours'));
+    }
+
+    public function toggleArchive($id)
+    {
+        $payment = Payment::findOrFail($id);
+        $payment->update(['is_archived' => !$payment->is_archived]);
+
+        $message = $payment->is_archived ? 'Payment record archived.' : 'Payment record restored.';
+        return back()->with('success', $message);
+    }
+
+    public function destroy($id)
+    {
+        $payment = Payment::findOrFail($id);
+        $payment->delete();
+
+        return back()->with('success', 'Payment record permanently deleted.');
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $query = Payment::with([
+            'booking.user',
+            'booking.tourSchedule.tour',
+        ])->where('is_archived', false);
+
+        // Apply same filters as index
+        if ($request->filled('tour_id')) {
+            $query->whereHas('booking.tourSchedule.tour', fn($q) => $q->where('id', $request->tour_id));
+        }
+        if ($request->filled('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+        if ($request->filled('status')) {
+            $query->where('payment_status', $request->status);
+        }
+
+        $payments = $query->latest()->get();
+        $total = $payments->where('payment_status', 'completed')->sum('amount');
+
+        $pdf = Pdf::loadView('admin.payments.report_pdf', [
+            'payments' => $payments,
+            'total'    => $total,
+            'date'     => now()->format('M d, Y'),
+            'filters'  => [
+                'tour'   => $request->tour_id ? Tour::find($request->tour_id)->name : 'All Tours',
+                'status' => $request->status ?: 'All Status',
+                'date'   => $request->date ?: 'All Dates',
+            ]
+        ]);
+
+        return $pdf->download('Payment_Report_' . now()->format('Y-m-d') . '.pdf');
     }
 
     // ─────────────────────────────────────────
@@ -70,7 +142,7 @@ class PaymentController extends Controller
         $booking = null;
         if ($request->filled('booking_id')) {
             $booking = TourBooking::with('seniorImages')->where('user_id', Auth::id())
-                ->where('status', 'pending')
+                ->whereIn('status', [TourBooking::STATUS_PENDING, TourBooking::STATUS_REJECTED])
                 ->findOrFail($request->booking_id);
         }
 
@@ -152,9 +224,10 @@ class PaymentController extends Controller
 
         if ($booking) {
             $booking->update([
-                'p_count'         => $request->p_count,
-                'senior_count'    => $request->senior_count,
-                'status'          => $newStatus,
+                'p_count'          => $request->p_count,
+                'senior_count'     => $request->senior_count,
+                'status'           => $newStatus,
+                'rejection_reason' => null,
             ]);
         } else {
             $booking = TourBooking::create([
@@ -329,6 +402,13 @@ class PaymentController extends Controller
 
             // Update booking to confirmed
             $booking->update(['status' => TourBooking::STATUS_CONFIRMED]);
+
+            // Notify Client
+            $booking->user->notify(new \App\Notifications\BookingNotification(
+                $booking,
+                'booking_confirmed',
+                "Your payment for {$booking->tourSchedule->tour->name} was successful! Your booking is now confirmed."
+            ));
 
             // Check slots and notify admin
             TourBooking::checkSlotsAndNotify($booking->tour_sched_id);

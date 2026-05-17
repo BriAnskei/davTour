@@ -3,9 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Traits\LogsAudit;
 
 class TourBooking extends Model
 {
+    use LogsAudit;
+
     const STATUS_PENDING = 'pending';
     const STATUS_AWAITING_VALIDATION = 'awaiting_validation';
     const STATUS_CONFIRMED = 'confirmed';
@@ -19,6 +22,8 @@ class TourBooking extends Model
         'senior_count',
         'senior_id_image',
         'status',
+        'is_archived',
+        'rejection_reason',
     ];
 
     public function user()

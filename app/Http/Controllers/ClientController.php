@@ -54,6 +54,7 @@ class ClientController extends Controller
     {
         $tour = Tour::with(['images', 'schedules' => function ($q) {
             $q->whereDate('date', '>=', today())
+              ->where('is_archived', false)
               ->withCount('bookings')
               ->orderBy('date');
         }])->where('status', 'active')->findOrFail($id);

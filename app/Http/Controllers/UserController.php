@@ -33,7 +33,7 @@ class UserController extends Controller
             'role' => 'nullable|string|in:user,admin',
         ]);
 
-        $user = User::create([
+        User::create([
             'name' => $request->name,
             'contact_number' => $request->contact_number,
             'email' => $request->email,
@@ -41,7 +41,7 @@ class UserController extends Controller
             'role' => $request->role ?? 'user',
         ]);
 
-        return response()->json($user, 201);
+        return back()->with('success', 'User created successfully.');
     }
 
     // Update an existing user
@@ -63,15 +63,20 @@ class UserController extends Controller
 
         $user->update($request->only('name', 'contact_number', 'email', 'role'));
 
-        return response()->json($user);
+        return back()->with('success', 'User updated successfully.');
     }
 
     // Delete a user
     public function destroy($id)
     {
         $user = User::findOrFail($id);
+        
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot delete yourself.');
+        }
+
         $user->delete();
 
-        return response()->json(['message' => 'User deleted successfully.']);
+        return back()->with('success', 'User deleted successfully.');
     }
 }

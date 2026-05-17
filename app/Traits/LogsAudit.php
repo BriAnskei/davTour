@@ -32,6 +32,11 @@ trait LogsAudit
         } elseif ($action === 'updated') {
             $newValues = $this->getChanges();
             $oldValues = array_intersect_key($this->getOriginal(), $newValues);
+
+            // Special case: detected Archive/Restore
+            if (isset($newValues['is_archived'])) {
+                $action = $newValues['is_archived'] ? 'archived' : 'restored';
+            }
         } elseif ($action === 'deleted') {
             $oldValues = $this->getOriginal();
         }
@@ -60,6 +65,13 @@ trait LogsAudit
             $tourName = $this->tour ? $this->tour->name : 'Unknown Tour';
             $date = \Carbon\Carbon::parse($this->date)->format('M d, Y');
             $auditableName = "Schedule for '{$tourName}' on {$date}";
+        } elseif ($this instanceof \App\Models\TourBooking) {
+            $guestName = $this->user ? $this->user->name : 'Unknown Guest';
+            $tourName = ($this->tourSchedule && $this->tourSchedule->tour) ? $this->tourSchedule->tour->name : 'Unknown Tour';
+            $auditableName = "Booking #{$this->id} ({$guestName} - {$tourName})";
+        } elseif ($this instanceof \App\Models\Payment) {
+            $guestName = ($this->booking && $this->booking->user) ? $this->booking->user->name : 'Unknown Guest';
+            $auditableName = "Payment #{$this->id} for {$guestName} (₱" . number_format($this->amount, 2) . ")";
         }
 
         AuditLog::create([

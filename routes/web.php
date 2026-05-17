@@ -34,6 +34,16 @@ Route::middleware('guest')->group(function () {
 // Required by Laravel's auth middleware as the named 'login' route
 Route::get('/login', fn() => redirect()->route('client.index'))->name('login');
 
+// Redirect for /payments to appropriate role-based route
+Route::get('/payments', function () {
+    if (Auth::check()) {
+        return Auth::user()->role === 'admin'
+            ? redirect()->route('admin.payments.index')
+            : redirect()->route('client.payments');
+    }
+    return redirect()->route('login');
+})->middleware('auth');
+
 Route::post('/logout', [AuthController::class, 'logout'])
     ->name('logout')
     ->middleware('auth');
@@ -55,10 +65,15 @@ Route::prefix('client')->name('client.')->group(function () {
     // ── Auth-required routes (must be before /{id} wildcard) ──
     Route::middleware('auth')->group(function () {
 
+        // Notifications
+        Route::get('/notifications', [TourBookingController::class, 'getNotifications'])->name('notifications.index');
+        Route::post('/notifications/mark-as-read', [TourBookingController::class, 'markNotificationsAsRead'])->name('notifications.markAsRead');
+
         // Booking
         Route::get('/booking',                [TourBookingController::class, 'create'])->name('booking.create');
         Route::post('/book',                  [TourBookingController::class, 'store'])->name('book');
         Route::get('/my-bookings',            [TourBookingController::class, 'myBookings'])->name('bookings');
+        Route::get('/bookings/{id}',          [TourBookingController::class, 'show'])->name('bookings.show');
         Route::patch('/bookings/{id}/cancel', [TourBookingController::class, 'cancel'])->name('bookings.cancel');
 
         // Stripe Payment
@@ -77,90 +92,79 @@ Route::prefix('client')->name('client.')->group(function () {
 
 
 // ─────────────────────────────────────────
-// ADMIN
+// ADMIN CONSOLIDATED
 // ─────────────────────────────────────────
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\TourController;
+use App\Http\Controllers\TourScheduleController;
+use App\Http\Controllers\TourImageController;
+use App\Http\Controllers\UserController;
 
 Route::middleware(['auth', 'can:isAdmin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', fn() => redirect()->route('admin.dashboard'));
-    Route::get('/dashboard',              [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::get('/bookings',               [AdminController::class, 'bookings'])->name('bookings');
-    Route::patch('/bookings/{id}/status', [AdminController::class, 'updateBookingStatus'])->name('bookings.status');
-    Route::get('/users',                  [AdminController::class, 'users'])->name('users');
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
+
+    // Bookings
+    Route::prefix('bookings')->name('bookings.')->group(function() {
+        Route::get('/',               [AdminController::class, 'bookings'])->name('index');
+        Route::get('/archive',        [AdminController::class, 'archivedBookings'])->name('archive');
+        Route::patch('/{id}/archive', [AdminController::class, 'toggleBookingArchive'])->name('archive.toggle');
+        Route::patch('/{id}/status',  [AdminController::class, 'updateBookingStatus'])->name('status');
+        Route::get('/{id}/validate',  [AdminController::class, 'showValidationPage'])->name('validate');
+        Route::post('/{id}/validate', [AdminController::class, 'validateSeniorBooking'])->name('validate.post');
+    });
+
+    // Tours
+    Route::prefix('tours')->name('tours.')->group(function() {
+        Route::get('/',                [TourController::class, 'index'])->name('index');
+        Route::get('/archive',         [TourController::class, 'archivedTours'])->name('archive');
+        Route::get('/create',          [TourController::class, 'create'])->name('create');
+        Route::post('/',               [TourController::class, 'store'])->name('store');
+        Route::get('/{id}',            [TourController::class, 'show'])->name('show');
+        Route::get('/{id}/edit',       [TourController::class, 'edit'])->name('edit');
+        Route::put('/{id}',            [TourController::class, 'update'])->name('update');
+        Route::delete('/{id}',         [TourController::class, 'destroy'])->name('destroy');
+        Route::patch('/{id}/toggle',   [TourController::class, 'toggle'])->name('toggle');
+        Route::patch('/{id}/archive',  [TourController::class, 'toggleArchive'])->name('archive.toggle');
+    });
+
+    // Tour Images
+    Route::delete('/tour-images/{id}', [TourImageController::class, 'destroy'])->name('tour_images.destroy');
+
+    // Tour Schedules
+    Route::prefix('tour-schedules')->name('tour_schedules.')->group(function() {
+        Route::get('/',               [TourScheduleController::class, 'index'])->name('index');
+        Route::get('/archive',        [TourScheduleController::class, 'archivedSchedules'])->name('archive');
+        Route::get('/create',         [TourScheduleController::class, 'create'])->name('create');
+        Route::post('/',              [TourScheduleController::class, 'store'])->name('store');
+        Route::get('/{id}',           [TourScheduleController::class, 'show'])->name('show');
+        Route::get('/{id}/edit',      [TourScheduleController::class, 'edit'])->name('edit');
+        Route::put('/{id}',           [TourScheduleController::class, 'update'])->name('update');
+        Route::delete('/{id}',        [TourScheduleController::class, 'destroy'])->name('destroy');
+        Route::patch('/{id}/archive', [TourScheduleController::class, 'toggleArchive'])->name('archive.toggle');
+    });
+
+    // Payments
+    Route::prefix('payments')->name('payments.')->group(function() {
+        Route::get('/',               [PaymentController::class, 'index'])->name('index');
+        Route::get('/archive',        [PaymentController::class, 'archivedPayments'])->name('archive');
+        Route::patch('/{id}/archive', [PaymentController::class, 'toggleArchive'])->name('archive.toggle');
+        Route::delete('/{id}',        [PaymentController::class, 'destroy'])->name('destroy');
+        Route::get('/export-pdf',     [PaymentController::class, 'exportPdf'])->name('export_pdf');
+    });
+
+    // Users
+    Route::prefix('users')->name('users.')->group(function() {
+        Route::get('/',        [AdminController::class, 'users'])->name('index');
+        Route::post('/',       [UserController::class, 'store'])->name('store');
+        Route::get('/{id}',    [UserController::class, 'show'])->name('show');
+        Route::put('/{id}',    [UserController::class, 'update'])->name('update');
+        Route::delete('/{id}', [UserController::class, 'destroy'])->name('destroy');
+    });
+
     Route::get('/audit-logs/{type}',      [AdminController::class, 'getAuditLogs'])->name('audit_logs');
 
     // Notifications
     Route::get('/notifications', [AdminController::class, 'getNotifications'])->name('notifications.index');
     Route::post('/notifications/mark-as-read', [AdminController::class, 'markNotificationsAsRead'])->name('notifications.markAsRead');
-
-    // Senior Validation
-    Route::get('/bookings/{id}/validate', [AdminController::class, 'showValidationPage'])->name('bookings.validate');
-    Route::post('/bookings/{id}/validate', [AdminController::class, 'validateSeniorBooking'])->name('bookings.validate.post');
-});
-
-
-// ─────────────────────────────────────────
-// TOURS — admin CRUD
-// Note: /create must come before /{id}
-// ─────────────────────────────────────────
-use App\Http\Controllers\TourController;
-
-Route::middleware(['auth', 'can:isAdmin'])->group(function () {
-    Route::get('/tours/create',        [TourController::class, 'create'])->name('tours.create');
-    Route::post('/tours',              [TourController::class, 'store'])->name('tours.store');
-    Route::get('/tours/{id}/edit',     [TourController::class, 'edit'])->name('tours.edit');
-    Route::put('/tours/{id}',          [TourController::class, 'update'])->name('tours.update');
-    Route::delete('/tours/{id}',       [TourController::class, 'destroy'])->name('tours.destroy');
-    Route::patch('/tours/{id}/toggle', [TourController::class, 'toggle'])->name('tours.toggle');
-    Route::get('/tours',               [TourController::class, 'index'])->name('tours.index');
-    Route::get('/tours/{id}',          [TourController::class, 'show'])->name('tours.show');
-});
-
-
-// ─────────────────────────────────────────
-// TOUR IMAGES
-// ─────────────────────────────────────────
-use App\Http\Controllers\TourImageController;
-
-Route::middleware(['auth', 'can:isAdmin'])->group(function () {
-    Route::delete('/tour-images/{id}', [TourImageController::class, 'destroy'])->name('tour_images.destroy');
-});
-
-
-// ─────────────────────────────────────────
-// TOUR SCHEDULES
-// Note: /create must come before /{id}
-// ─────────────────────────────────────────
-use App\Http\Controllers\TourScheduleController;
-
-Route::middleware(['auth', 'can:isAdmin'])->group(function () {
-    Route::get('/tour-schedules/create',    [TourScheduleController::class, 'create'])->name('tour_schedules.create');
-    Route::post('/tour-schedules',          [TourScheduleController::class, 'store'])->name('tour_schedules.store');
-    Route::get('/tour-schedules/{id}/edit', [TourScheduleController::class, 'edit'])->name('tour_schedules.edit');
-    Route::put('/tour-schedules/{id}',      [TourScheduleController::class, 'update'])->name('tour_schedules.update');
-    Route::delete('/tour-schedules/{id}',   [TourScheduleController::class, 'destroy'])->name('tour_schedules.destroy');
-    Route::get('/tour-schedules',           [TourScheduleController::class, 'index'])->name('tour_schedules.index');
-    Route::get('/tour-schedules/{id}',      [TourScheduleController::class, 'show'])->name('tour_schedules.show');
-});
-
-
-// ─────────────────────────────────────────
-// PAYMENTS — admin view only
-// ─────────────────────────────────────────
-Route::middleware(['auth', 'can:isAdmin'])->group(function () {
-    Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-});
-
-
-// ─────────────────────────────────────────
-// USERS — admin
-// ─────────────────────────────────────────
-use App\Http\Controllers\UserController;
-
-Route::middleware(['auth', 'can:isAdmin'])->prefix('users')->group(function () {
-    Route::get('/',        [UserController::class, 'index']);
-    Route::get('/{id}',    [UserController::class, 'show']);
-    Route::post('/',       [UserController::class, 'store']);
-    Route::put('/{id}',    [UserController::class, 'update']);
-    Route::delete('/{id}', [UserController::class, 'destroy'])->name('users.destroy');
 });

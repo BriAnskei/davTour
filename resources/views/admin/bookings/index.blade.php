@@ -8,9 +8,9 @@
 
 {{-- Filter Bar --}}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-    <div class="flex gap-2 flex-wrap">
+    <div class="flex gap-2 flex-wrap items-center">
         @foreach(['all' => 'All', 'pending' => 'Pending', 'awaiting_validation' => 'To Validate', 'confirmed' => 'Confirmed', 'cancelled' => 'Cancelled', 'rejected' => 'Rejected'] as $val => $label)
-        <a href="{{ route('admin.bookings', ['status' => $val === 'all' ? null : $val]) }}"
+        <a href="{{ route('admin.bookings.index', ['status' => $val === 'all' ? null : $val]) }}"
            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
                {{ (request('status', 'all') === $val || (!request('status') && $val === 'all')) ? 'text-white' : 'bg-white border border-slate2 text-gray-500 hover:bg-gray-50' }}"
            style="{{ (request('status', 'all') === $val || (!request('status') && $val === 'all')) ? 'background:#1a3a2a;' : '' }}">
@@ -20,9 +20,17 @@
             @endif
         </a>
         @endforeach
+
+        <div class="w-px h-6 bg-slate2 mx-2"></div>
+
+        <a href="{{ route('admin.bookings.archive') }}" 
+           class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-slate2 text-amber-500 hover:bg-amber-50 transition-colors flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            Archived Bookings
+        </a>
     </div>
 
-    <form method="GET" action="{{ route('admin.bookings') }}" class="flex gap-2">
+    <form method="GET" action="{{ route('admin.bookings.index') }}" class="flex gap-2">
         <input type="hidden" name="status" value="{{ request('status') }}">
         <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -105,6 +113,11 @@
                                'bg-red-100 text-red-500')) }}">
                             {{ $booking->status === 'awaiting_validation' ? 'Validation Required' : ucfirst($booking->status) }}
                         </span>
+                        @if($booking->status === 'rejected' && $booking->rejection_reason)
+                            <p class="text-[10px] text-red-400 mt-1 italic line-clamp-1" title="{{ $booking->rejection_reason }}">
+                                {{ $booking->rejection_reason }}
+                            </p>
+                        @endif
                     </td>
                     <td class="px-6 py-4 text-gray-400 text-xs">{{ $booking->created_at->format('M d, Y') }}</td>
                     <td class="px-6 py-4">
@@ -119,24 +132,23 @@
 
                             {{-- Quick status update --}}
                             @if($booking->status === 'pending')
-                            <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
-                                @csrf @method('PATCH')
-                                <input type="hidden" name="status" value="confirmed">
-                                <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-jungle-100 text-jungle-700 hover:bg-jungle-200 transition-colors">
-                                    Confirm
-                                </button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
-                                @csrf @method('PATCH')
-                                <input type="hidden" name="status" value="cancelled">
-                                <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-400 hover:bg-red-100 transition-colors">
-                                    Cancel
-                                </button>
-                            </form>
-                            @elseif($booking->status === 'awaiting_validation')
-                                {{-- Only show Validate button --}}
+                                <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="status" value="cancelled">
+                                    <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-400 hover:bg-red-100 transition-colors">
+                                        Cancel
+                                    </button>
+                                </form>
+                            @elseif($booking->status === 'confirmed' || $booking->status === 'cancelled' || $booking->status === 'rejected' || ($booking->tourSchedule && \Carbon\Carbon::parse($booking->tourSchedule->date)->isPast()))
+                                <form method="POST" action="{{ route('admin.bookings.archive.toggle', $booking->id) }}">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors flex items-center gap-1">
+                                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                                        Archive
+                                    </button>
+                                </form>
                             @else
-                            <span class="text-xs text-gray-300 italic">—</span>
+                                <span class="text-xs text-gray-300 italic">—</span>
                             @endif
                         </div>
                     </td>

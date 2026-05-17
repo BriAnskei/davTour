@@ -45,7 +45,7 @@
         <div class="bg-white rounded-2xl card-shine border border-slate2 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate2 flex items-center justify-between">
                 <h2 class="font-display text-jungle-700 font-bold text-base">Tour Schedules</h2>
-                <a href="{{ route('tour_schedules.create', ['tour_id' => $tour->id]) }}"
+                <a href="{{ route('admin.tour_schedules.create', ['tour_id' => $tour->id]) }}"
                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white"
                    style="background:#1a3a2a;">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -73,9 +73,9 @@
                         </td>
                         <td class="px-6 py-3">
                             <div class="flex gap-2">
-                                <a href="{{ route('tour_schedules.edit', $sched->id) }}"
+                                <a href="{{ route('admin.tour_schedules.edit', $sched->id) }}"
                                    class="text-xs text-blue-400 hover:text-blue-600 font-semibold">Edit</a>
-                                <form method="POST" action="{{ route('tour_schedules.destroy', $sched->id) }}" class="inline"
+                                <form method="POST" action="{{ route('admin.tour_schedules.destroy', $sched->id) }}" class="inline"
                                       onsubmit="return confirm('Delete this schedule?')">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-xs text-red-400 hover:text-red-600 font-semibold">Delete</button>
@@ -131,13 +131,13 @@
             </div>
 
             <div class="mt-6 pt-5 border-t border-slate2 space-y-2">
-                <a href="{{ route('tours.edit', $tour->id) }}"
+                <a href="{{ route('admin.tours.edit', $tour->id) }}"
                    class="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-all"
                    style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     Edit Tour
                 </a>
-                <form method="POST" action="{{ route('tours.destroy', $tour->id) }}"
+                <form method="POST" action="{{ route('admin.tours.destroy', $tour->id) }}"
                       onsubmit="return confirm('Delete this tour permanently?')">
                     @csrf @method('DELETE')
                     <button type="submit"
@@ -146,7 +146,7 @@
                         Delete Tour
                     </button>
                 </form>
-                <a href="{{ route('tours.index') }}"
+                <a href="{{ route('admin.tours.index') }}"
                    class="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors">
                     ← Back to Tours
                 </a>

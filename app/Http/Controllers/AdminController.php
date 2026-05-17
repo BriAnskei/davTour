@@ -33,15 +33,16 @@ class AdminController extends Controller
     public function dashboard()
     {
         $totalTours     = Tour::count();
-        $totalSchedules = TourSchedule::whereDate('date', '>=', today())->count();
-        $totalBookings  = TourBooking::count();
+        $totalSchedules = TourSchedule::where('is_archived', false)->whereDate('date', '>=', today())->count();
+        $totalBookings  = TourBooking::where('is_archived', false)->count();
         $totalRevenue   = Payment::where('payment_status', 'completed')->sum('amount');
 
         $todayBookings   = TourBooking::whereDate('created_at', today())->count();
         $pendingPayments = Payment::where('payment_status', 'pending')->count();
-        $upcomingTours   = TourSchedule::whereDate('date', '>', today())->count();
+        $upcomingTours   = TourSchedule::where('is_archived', false)->whereDate('date', '>', today())->count();
 
         $recentBookings = TourBooking::with(['user', 'tourSchedule.tour'])
+            ->where('is_archived', false)
             ->latest()
             ->take(8)
             ->get();
@@ -63,7 +64,8 @@ class AdminController extends Controller
     // ─────────────────────────────────────────
     public function bookings(Request $request)
     {
-        $query = TourBooking::with(['user', 'tourSchedule.tour', 'seniorImages']);
+        $query = TourBooking::with(['user', 'tourSchedule.tour', 'seniorImages'])
+            ->where('is_archived', false);
 
         // Filter by status
         if ($request->filled('status')) {
@@ -83,14 +85,41 @@ class AdminController extends Controller
 
         // Count per status for the filter tabs
         $counts = [
-            'pending'             => TourBooking::where('status', 'pending')->count(),
-            'awaiting_validation' => TourBooking::where('status', 'awaiting_validation')->count(),
-            'confirmed'           => TourBooking::where('status', 'confirmed')->count(),
-            'cancelled'           => TourBooking::where('status', 'cancelled')->count(),
-            'rejected'            => TourBooking::where('status', 'rejected')->count(),
+            'pending'             => TourBooking::where('is_archived', false)->where('status', 'pending')->count(),
+            'awaiting_validation' => TourBooking::where('is_archived', false)->where('status', 'awaiting_validation')->count(),
+            'confirmed'           => TourBooking::where('is_archived', false)->where('status', 'confirmed')->count(),
+            'cancelled'           => TourBooking::where('is_archived', false)->where('status', 'cancelled')->count(),
+            'rejected'            => TourBooking::where('is_archived', false)->where('status', 'rejected')->count(),
         ];
 
         return view('admin.bookings.index', compact('bookings', 'counts'));
+    }
+
+    public function archivedBookings(Request $request)
+    {
+        $query = TourBooking::with(['user', 'tourSchedule.tour', 'seniorImages'])
+            ->where('is_archived', true);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('user', fn($u) => $u->where('name', 'like', "%{$search}%"))
+                  ->orWhereHas('tourSchedule.tour', fn($t) => $t->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        $bookings = $query->latest()->paginate(15);
+
+        return view('admin.bookings.archive', compact('bookings'));
+    }
+
+    public function toggleBookingArchive($id)
+    {
+        $booking = TourBooking::findOrFail($id);
+        $booking->update(['is_archived' => !$booking->is_archived]);
+
+        $message = $booking->is_archived ? 'Booking archived.' : 'Booking restored.';
+        return back()->with('success', $message);
     }
 
     // ─────────────────────────────────────────
@@ -103,10 +132,22 @@ class AdminController extends Controller
         ]);
 
         $booking = TourBooking::findOrFail($id);
+
+        if ($request->status === 'confirmed' && $booking->status === TourBooking::STATUS_PENDING) {
+            return back()->with('error', 'Cannot manually confirm a booking awaiting payment.');
+        }
+
         $booking->update(['status' => $request->status]);
 
         if ($request->status === 'confirmed') {
             TourBooking::checkSlotsAndNotify($booking->tour_sched_id);
+
+            // Notify Client
+            $booking->user->notify(new \App\Notifications\BookingNotification(
+                $booking,
+                'booking_confirmed',
+                "Your booking for {$booking->tourSchedule->tour->name} has been confirmed!"
+            ));
         }
 
         return back()->with('success', 'Booking status updated to ' . $request->status . '.');
@@ -164,7 +205,7 @@ class AdminController extends Controller
         $booking = TourBooking::with(['user', 'tourSchedule.tour', 'seniorImages'])->findOrFail($id);
         
         if ($booking->senior_count === 0) {
-            return redirect()->route('admin.bookings')->with('error', 'This booking does not require senior validation.');
+            return redirect()->route('admin.bookings.index')->with('error', 'This booking does not require senior validation.');
         }
 
         return view('admin.bookings.validate', compact('booking'));
@@ -174,20 +215,39 @@ class AdminController extends Controller
     {
         $request->validate([
             'action' => 'required|in:approve,reject',
-            'reason' => 'required_if:action,reject|nullable|string',
+            'reason' => 'nullable|string',
         ]);
 
         $booking = TourBooking::findOrFail($id);
 
         if ($request->action === 'approve') {
-            $booking->update(['status' => TourBooking::STATUS_PENDING]);
+            $booking->status = TourBooking::STATUS_PENDING;
+            $booking->rejection_reason = null;
+            $booking->save();
+
             $message = 'Senior ID validated! Booking is now awaiting payment.';
+
+            // Notify Client
+            $booking->user->notify(new \App\Notifications\BookingNotification(
+                $booking,
+                'senior_approved',
+                "Your Senior Citizen ID has been approved for {$booking->tourSchedule->tour->name}. You can now proceed to payment."
+            ));
         } else {
-            $booking->update(['status' => TourBooking::STATUS_REJECTED]);
+            $booking->status = TourBooking::STATUS_REJECTED;
+            $booking->rejection_reason = $request->reason;
+            $booking->save();
+
             $message = 'Senior ID rejected. Booking status updated to rejected.';
-            // Optionally notify user here
+
+            // Notify Client
+            $booking->user->notify(new \App\Notifications\BookingNotification(
+                $booking,
+                'senior_rejected',
+                "Senior ID rejected: {$request->reason}. Click to resubmit."
+            ));
         }
 
-        return redirect()->route('admin.bookings')->with('success', $message);
+        return redirect()->route('admin.bookings.index')->with('success', $message);
     }
 }

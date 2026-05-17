@@ -7,7 +7,7 @@
 @section('content')
 
 <div class="max-w-xl">
-    <form method="POST" action="{{ route('tour_schedules.update', $schedule->id) }}" class="space-y-6">
+    <form method="POST" action="{{ route('admin.tour_schedules.update', $schedule->id) }}" class="space-y-6">
         @csrf
         @method('PUT')
 
@@ -48,7 +48,7 @@
                     style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
                 Save Changes
             </button>
-            <a href="{{ route('tour_schedules.index') }}"
+            <a href="{{ route('admin.tour_schedules.index') }}"
                class="px-6 py-2.5 rounded-xl text-sm font-semibold text-gray-500 bg-white border border-slate2 hover:bg-gray-50 transition-colors">
                 Cancel
             </a>

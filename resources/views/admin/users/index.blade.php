@@ -26,7 +26,7 @@
 <div class="flex flex-col sm:flex-row gap-3 justify-between mb-5">
     <div class="flex gap-2">
         @foreach(['all' => 'All', 'user' => 'Clients', 'admin' => 'Admins'] as $val => $label)
-        <a href="{{ route('admin.users', ['role' => $val === 'all' ? null : $val]) }}"
+        <a href="{{ route('admin.users.index', ['role' => $val === 'all' ? null : $val]) }}"
            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors
                {{ (request('role', 'all') === $val || (!request('role') && $val === 'all')) ? 'text-white' : 'bg-white border border-slate2 text-gray-500 hover:bg-gray-50' }}"
            style="{{ (request('role', 'all') === $val || (!request('role') && $val === 'all')) ? 'background:#1a3a2a;' : '' }}">
@@ -34,7 +34,7 @@
         </a>
         @endforeach
     </div>
-    <form method="GET" action="{{ route('admin.users') }}" class="flex gap-2">
+    <form method="GET" action="{{ route('admin.users.index') }}" class="flex gap-2">
         <input type="hidden" name="role" value="{{ request('role') }}">
         <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -89,7 +89,7 @@
                         <div class="flex items-center justify-end gap-1.5">
                             {{-- Prevent deleting yourself --}}
                             @if($user->id !== Auth::id())
-                            <form method="POST" action="{{ route('users.destroy', $user->id) }}"
+                            <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}"
                                   onsubmit="return confirm('Delete user {{ $user->name }}? This cannot be undone.')">
                                 @csrf @method('DELETE')
                                 <button type="submit"

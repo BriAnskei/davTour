@@ -15,6 +15,7 @@ class TourBookingController extends Controller
     public function create(Request $request)
     {
         $schedule = TourSchedule::with(['tour.images'])
+            ->where('is_archived', false)
             ->findOrFail($request->schedule_id);
 
         $totalPax = TourBooking::where('tour_sched_id', $schedule->id)
@@ -72,7 +73,7 @@ class TourBookingController extends Controller
             'p_count'       => 'required|integer|min:1',
         ]);
 
-        $schedule  = TourSchedule::withCount('bookings')->findOrFail($request->tour_sched_id);
+        $schedule  = TourSchedule::where('is_archived', false)->withCount('bookings')->findOrFail($request->tour_sched_id);
         $remaining = $schedule->slots - $schedule->bookings_count;
 
         if ($request->p_count > $remaining) {
@@ -116,14 +117,31 @@ class TourBookingController extends Controller
     // ─────────────────────────────────────────
     // Client: View own bookings
     // ─────────────────────────────────────────
-    public function myBookings()
+    public function myBookings(Request $request)
     {
-        $bookings = TourBooking::with(['tourSchedule.tour.images'])
-            ->where('user_id', Auth::id())
-            ->latest()
-            ->paginate(10);
+        $tab = $request->get('tab', 'upcoming');
 
-        return view('client.bookings', compact('bookings'));
+        $query = TourBooking::with(['tourSchedule.tour.images'])
+            ->where('user_id', Auth::id());
+
+        if ($tab === 'past') {
+            $query->whereHas('tourSchedule', function ($q) {
+                $q->where('date', '<', today());
+            })->latest();
+        } else {
+            $query->whereHas('tourSchedule', function ($q) {
+                $q->where('date', '>=', today());
+            })->orderBy(
+                TourSchedule::select('date')
+                    ->whereColumn('tour_schedules.id', 'tour_bookings.tour_sched_id')
+                    ->take(1),
+                'asc'
+            );
+        }
+
+        $bookings = $query->paginate(10);
+
+        return view('client.bookings', compact('bookings', 'tab'));
     }
 
     // ─────────────────────────────────────────
@@ -136,5 +154,26 @@ class TourBookingController extends Controller
         $booking->update(['status' => 'cancelled']);
 
         return back()->with('success', 'Booking cancelled successfully.');
+    }
+
+    public function show($id)
+    {
+        $booking = TourBooking::with(['tourSchedule.tour.images', 'seniorImages', 'payments'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($id);
+
+        return view('client.bookings.show', compact('booking'));
+    }
+
+    public function getNotifications()
+    {
+        $notifications = auth()->user()->unreadNotifications;
+        return response()->json($notifications);
+    }
+
+    public function markNotificationsAsRead()
+    {
+        auth()->user()->unreadNotifications->markAsRead();
+        return response()->json(['success' => true]);
     }
 }

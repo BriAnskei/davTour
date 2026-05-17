@@ -9,11 +9,16 @@
 {{-- Header --}}
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div class="flex gap-2">
-        <a href="{{ route('tour_schedules.create') }}"
+        <a href="{{ route('admin.tour_schedules.create') }}"
            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white hover:opacity-90 hover:shadow-lg transition-all"
            style="background: linear-gradient(135deg,#1a3a2a,#2d6a4f);">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             New Schedule
+        </a>
+        <a href="{{ route('admin.tour_schedules.archive') }}"
+           class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-amber-500 bg-white border border-slate2 transition-all hover:bg-amber-50">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+            Archived Schedules
         </a>
         <button type="button"
                 onclick="openAuditLogModal('schedules')"
@@ -23,7 +28,7 @@
         </button>
     </div>
 
-    <form method="GET" action="{{ route('tour_schedules.index') }}" class="flex items-center gap-2">
+    <form method="GET" action="{{ route('admin.tour_schedules.index') }}" class="flex items-center gap-2">
         <select name="tour_id" class="px-3 py-2.5 rounded-xl border border-slate2 text-sm focus:outline-none focus:border-jungle-500 bg-white text-gray-600 min-w-[180px]">
             <option value="">All Tours</option>
             @foreach($tours ?? [] as $t)
@@ -34,7 +39,7 @@
                class="px-3 py-2.5 rounded-xl border border-slate2 text-sm focus:outline-none focus:border-jungle-500 bg-white text-gray-600">
         <button type="submit" class="px-4 py-2.5 rounded-xl bg-amber-400 text-white text-sm font-semibold hover:bg-amber-500 transition-colors">Filter</button>
         @if(request()->hasAny(['tour_id','month']))
-        <a href="{{ route('tour_schedules.index') }}" class="text-xs text-gray-400 hover:text-gray-600">Clear</a>
+        <a href="{{ route('admin.tour_schedules.index') }}" class="text-xs text-gray-400 hover:text-gray-600">Clear</a>
         @endif
     </form>
 </div>
@@ -102,11 +107,17 @@
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-end gap-1.5">
-                            <a href="{{ route('tour_schedules.edit', $sched->id) }}"
+                            <form method="POST" action="{{ route('admin.tour_schedules.archive.toggle', $sched->id) }}">
+                                @csrf @method('PATCH')
+                                <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-50 transition-colors" title="Archive">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                                </button>
+                            </form>
+                            <a href="{{ route('admin.tour_schedules.edit', $sched->id) }}"
                                class="w-8 h-8 rounded-lg flex items-center justify-center text-blue-400 hover:bg-blue-50 transition-colors" title="Edit">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </a>
-                            <form method="POST" action="{{ route('tour_schedules.destroy', $sched->id) }}"
+                            <form method="POST" action="{{ route('admin.tour_schedules.destroy', $sched->id) }}"
                                   onsubmit="return confirm('Delete this schedule?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors" title="Delete">
@@ -123,7 +134,7 @@
                             <svg class="w-6 h-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                         </div>
                         <p class="text-gray-400 text-sm font-medium">No schedules found.</p>
-                        <a href="{{ route('tour_schedules.create') }}" class="text-xs text-amber-400 hover:text-amber-500 font-semibold mt-1 inline-block">Add one now →</a>
+                        <a href="{{ route('admin.tour_schedules.create') }}" class="text-xs text-amber-400 hover:text-amber-500 font-semibold mt-1 inline-block">Add one now →</a>
                     </td>
                 </tr>
                 @endforelse
