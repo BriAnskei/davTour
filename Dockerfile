@@ -26,6 +26,8 @@ RUN docker-php-ext-install -j$(nproc) \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+
+
 # Configure PHP-FPM
 RUN sed -i 's/listen = \/run\/php\/php8.3-fpm.sock/listen = 9000/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
 
@@ -48,6 +50,10 @@ RUN echo 'server {\n\
 # Setup Laravel
 WORKDIR /var/www/html
 COPY . /var/www/html
+
+
+# Copy SSL certificate for Aiven database
+COPY certs/ca.pem /etc/ssl/certs/aiven-ca.pem
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
