@@ -63,23 +63,29 @@
                         {{ isset($booking->tourSchedule->date) ? \Carbon\Carbon::parse($booking->tourSchedule->date)->format('M d, Y') : '—' }}
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-jungle-50 text-jungle-700">
+                        <span class="px-2 py-0.5 text-xs font-bold text-jungle-700">
                             {{ $booking->p_count }} pax
                         </span>
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold
-                            {{ $booking->status === 'confirmed' ? 'bg-jungle-100 text-jungle-700' :
-                               ($booking->status === 'pending'   ? 'bg-amber-100 text-amber-500' :
-                               ($booking->status === 'awaiting_validation' ? 'bg-orange-100 text-orange-600' :
-                               'bg-red-100 text-red-500')) }}">
+                        <span class="px-2.5 py-1 text-xs font-semibold
+                            {{ $booking->status === 'confirmed' ? 'text-jungle-700' :
+                               ($booking->status === 'pending'   ? 'text-amber-500' :
+                               ($booking->status === 'awaiting_validation' ? 'text-orange-600' :
+                               'text-red-500')) }}">
                             {{ ucfirst($booking->status) }}
                         </span>
                     </td>
                     <td class="px-6 py-4 text-gray-400 text-xs">{{ $booking->updated_at->format('M d, Y') }}</td>
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-end">
-                            <form method="POST" action="{{ route('admin.bookings.archive.toggle', $booking->id) }}">
+                            <form method="POST" action="{{ route('admin.bookings.archive.toggle', $booking->id) }}"
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Restore Booking?',
+                                      description: 'Move this booking record back to the active list?',
+                                      confirmText: 'Yes, Restore',
+                                      variant: 'warning'
+                                  })">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-jungle-700 text-white hover:opacity-90 transition-colors shadow-sm">
                                     Restore Booking

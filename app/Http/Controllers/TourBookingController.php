@@ -120,9 +120,21 @@ class TourBookingController extends Controller
     public function myBookings(Request $request)
     {
         $tab = $request->get('tab', 'upcoming');
+        $search = $request->get('search');
+        $status = $request->get('status');
 
         $query = TourBooking::with(['tourSchedule.tour.images'])
             ->where('user_id', Auth::id());
+
+        if ($search) {
+            $query->whereHas('tourSchedule.tour', function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status) {
+            $query->where('status', $status);
+        }
 
         if ($tab === 'past') {
             $query->whereHas('tourSchedule', function ($q) {
@@ -139,7 +151,7 @@ class TourBookingController extends Controller
             );
         }
 
-        $bookings = $query->paginate(10);
+        $bookings = $query->paginate(10)->withQueryString();
 
         return view('client.bookings', compact('bookings', 'tab'));
     }

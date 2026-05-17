@@ -67,7 +67,7 @@
                             {{ \Carbon\Carbon::parse($sched->date)->format('M d, Y') }}
                         </td>
                         <td class="px-6 py-3">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $sched->slots > 5 ? 'bg-jungle-100 text-jungle-700' : 'bg-red-100 text-red-500' }}">
+                            <span class="px-2.5 py-1 text-xs font-semibold {{ $sched->slots > 5 ? 'text-jungle-700' : 'text-red-500' }}">
                                 {{ $sched->slots }} slots
                             </span>
                         </td>
@@ -76,7 +76,12 @@
                                 <a href="{{ route('admin.tour_schedules.edit', $sched->id) }}"
                                    class="text-xs text-blue-400 hover:text-blue-600 font-semibold">Edit</a>
                                 <form method="POST" action="{{ route('admin.tour_schedules.destroy', $sched->id) }}" class="inline"
-                                      onsubmit="return confirm('Delete this schedule?')">
+                                      onsubmit="confirmAction(event, {
+                                          title: 'Delete Schedule?',
+                                          description: 'Permanently delete this schedule for {{ \Carbon\Carbon::parse($sched->date)->format('M d, Y') }}?',
+                                          confirmText: 'Yes, Delete',
+                                          variant: 'danger'
+                                      })">
                                     @csrf @method('DELETE')
                                     <button type="submit" class="text-xs text-red-400 hover:text-red-600 font-semibold">Delete</button>
                                 </form>
@@ -99,7 +104,7 @@
 
         <div class="bg-white rounded-2xl card-shine border border-slate2 p-6">
             <div class="flex items-center gap-2 mb-5">
-                <span class="px-3 py-1 rounded-full text-xs font-bold {{ $tour->status === 'active' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500' }}">
+                <span class="px-3 py-1 text-xs font-bold {{ $tour->status === 'active' ? 'text-green-600' : 'text-gray-500' }}">
                     {{ ucfirst($tour->status) }}
                 </span>
             </div>
@@ -138,7 +143,12 @@
                     Edit Tour
                 </a>
                 <form method="POST" action="{{ route('admin.tours.destroy', $tour->id) }}"
-                      onsubmit="return confirm('Delete this tour permanently?')">
+                      onsubmit="confirmAction(event, {
+                          title: 'Permanently Delete Tour?',
+                          description: 'Are you sure you want to delete this tour? This cannot be undone.',
+                          confirmText: 'Yes, Delete',
+                          variant: 'danger'
+                      })">
                     @csrf @method('DELETE')
                     <button type="submit"
                             class="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-semibold text-red-500 bg-red-50 hover:bg-red-100 transition-colors">

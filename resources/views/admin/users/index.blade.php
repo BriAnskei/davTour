@@ -76,8 +76,8 @@
                     </td>
                     <td class="px-6 py-4 text-gray-500 text-xs">{{ $user->contact_number ?? '—' }}</td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold
-                            {{ $user->role === 'admin' ? 'bg-amber-100 text-amber-600' : 'bg-jungle-100 text-jungle-700' }}">
+                        <span class="px-2.5 py-1 text-xs font-bold
+                            {{ $user->role === 'admin' ? 'text-amber-600' : 'text-jungle-700' }}">
                             {{ ucfirst($user->role) }}
                         </span>
                     </td>
@@ -90,7 +90,12 @@
                             {{-- Prevent deleting yourself --}}
                             @if($user->id !== Auth::id())
                             <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}"
-                                  onsubmit="return confirm('Delete user {{ $user->name }}? This cannot be undone.')">
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Permanently Delete User?',
+                                      description: 'Are you sure you want to delete user {{ $user->name }}? This action cannot be undone.',
+                                      confirmText: 'Yes, Delete',
+                                      variant: 'danger'
+                                  })">
                                 @csrf @method('DELETE')
                                 <button type="submit"
                                         class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors" title="Delete">

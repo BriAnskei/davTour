@@ -20,7 +20,7 @@
         <div class="lg:col-span-2 space-y-6">
             
             {{-- Status Banner --}}
-            <div class="rounded-2xl p-6 shadow-sm border {{ $booking->status === 'confirmed' ? 'bg-jungle-50 border-jungle-100 text-jungle-700' : ($booking->status === 'rejected' ? 'bg-red-50 border-red-100 text-red-700' : 'bg-amber-50 border-amber-100 text-amber-700') }}">
+            <div class="rounded-2xl p-6 shadow-sm border {{ $booking->status === 'confirmed' ? 'border-jungle-100 text-jungle-700' : ($booking->status === 'rejected' ? 'border-red-100 text-red-700' : 'border-amber-100 text-amber-700') }}">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 {{ $booking->status === 'confirmed' ? 'bg-jungle-500 text-white' : ($booking->status === 'rejected' ? 'bg-red-500 text-white' : 'bg-amber-400 text-white') }}">
                         @if($booking->status === 'confirmed')
@@ -51,13 +51,21 @@
                     </div>
                 </div>
 
-                @if($booking->status === 'rejected' && $booking->rejection_reason)
-                    <div class="mt-4 p-4 rounded-xl bg-white/50 border border-red-200">
-                        <p class="text-xs font-bold uppercase tracking-widest text-red-400 mb-1">Reason for Rejection</p>
-                        <p class="text-sm text-red-700 font-medium italic">"{{ $booking->rejection_reason }}"</p>
-                    </div>
+                @if($booking->status === 'rejected')
+                    @if($booking->rejection_reason)
+                        <div class="mt-4 p-4 rounded-xl border border-red-200">
+                            <p class="text-xs font-bold uppercase tracking-widest text-red-400 mb-1">Reason for Rejection</p>
+                            <p class="text-sm text-red-700 font-medium italic">"{{ $booking->rejection_reason }}"</p>
+                        </div>
+                    @endif
                     <div class="mt-4">
-                        <form method="POST" action="{{ route('client.payment.resume', $booking->id) }}">
+                        <form method="POST" action="{{ route('client.payment.resume', $booking->id) }}"
+                              onsubmit="confirmAction(event, {
+                                  title: 'Resubmit Booking?',
+                                  description: 'You will be able to update your details and submit the booking again.',
+                                  confirmText: 'Resubmit',
+                                  variant: 'warning'
+                              })">
                             @csrf
                             <button type="submit" class="w-full py-3 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-all shadow-md flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -73,6 +81,25 @@
                             @csrf
                             <button type="submit" class="w-full py-3 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-md">
                                 Proceed to Payment
+                            </button>
+                        </form>
+                    </div>
+                @endif
+
+                {{-- Cancel Booking Button --}}
+                @if($booking->status !== 'cancelled')
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <form method="POST" action="{{ route('client.bookings.cancel', $booking->id) }}"
+                              onsubmit="confirmAction(event, {
+                                  title: 'Cancel Booking?',
+                                  description: 'Are you sure you want to cancel this booking? This action is permanent.',
+                                  confirmText: 'Yes, Cancel',
+                                  variant: 'danger'
+                              })">
+                            @csrf @method('PATCH')
+                            <button type="submit" class="w-full py-3 rounded-xl border border-red-100 text-red-500 text-sm font-bold hover:bg-red-50 transition-all flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                Cancel Booking
                             </button>
                         </form>
                     </div>
@@ -176,7 +203,7 @@
                                 <p class="text-xs font-bold text-jungle-700">₱{{ number_format($payment->amount, 2) }}</p>
                                 <p class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">{{ $payment->created_at->format('M d, Y') }}</p>
                             </div>
-                            <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-widest {{ $payment->payment_status === 'completed' ? 'bg-jungle-50 text-jungle-500' : 'bg-amber-50 text-amber-500' }}">
+                            <span class="px-2 py-1 text-[10px] font-bold uppercase tracking-widest {{ $payment->payment_status === 'completed' ? 'text-jungle-500' : 'text-amber-500' }}">
                                 {{ $payment->payment_status }}
                             </span>
                         </div>

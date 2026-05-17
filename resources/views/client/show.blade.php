@@ -217,7 +217,7 @@
                     </div>
                     <div class="flex items-center justify-between py-2">
                         <span class="text-gray-500">Status</span>
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-600">
+                        <span class="px-2.5 py-1 text-xs font-bold text-green-600">
                             {{ ucfirst($tour->status) }}
                         </span>
                     </div>

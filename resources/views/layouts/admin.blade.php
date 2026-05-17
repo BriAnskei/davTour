@@ -220,10 +220,89 @@
     </footer>
 </div>
 
+{{-- ===== REUSABLE CONFIRMATION MODAL ===== --}}
+<div id="confirm-modal" class="fixed inset-0 z-[60] flex items-center justify-center px-4 hidden">
+    <div class="absolute inset-0 bg-jungle-700/40 backdrop-blur-sm" onclick="closeConfirmModal()"></div>
+    <div class="bg-white rounded-3xl max-w-sm w-full p-8 shadow-2xl relative animate-[fadeSlide_0.3s_ease-out] border border-gray-100">
+        <div id="confirm-icon-container" class="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
+            <svg id="confirm-icon" class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        </div>
+        
+        <h3 id="confirm-title" class="font-display font-bold text-jungle-700 text-2xl mb-2">Are you sure?</h3>
+        <p id="confirm-description" class="text-gray-500 text-sm leading-relaxed mb-8">This action cannot be undone. Please confirm to proceed.</p>
+
+        <div class="flex gap-3">
+            <button onclick="closeConfirmModal()" 
+                    class="flex-1 py-3 rounded-xl text-sm font-bold text-gray-400 bg-gray-50 hover:bg-gray-100 transition-all">
+                Cancel
+            </button>
+            <button id="confirm-proceed-btn" 
+                    class="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all shadow-md bg-red-500 hover:bg-red-600">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 @include('admin.components.audit_log_modal')
 @stack('scripts')
 
 <script>
+    // Reusable Confirmation Modal
+    let confirmCallback = null;
+
+    function openConfirmModal(options = {}) {
+        const modal = document.getElementById('confirm-modal');
+        const title = document.getElementById('confirm-title');
+        const desc  = document.getElementById('confirm-description');
+        const icon  = document.getElementById('confirm-icon');
+        const iconCont = document.getElementById('confirm-icon-container');
+        const proceedBtn = document.getElementById('confirm-proceed-btn');
+
+        title.textContent = options.title || 'Are you sure?';
+        desc.textContent  = options.description || 'This action cannot be undone.';
+        proceedBtn.textContent = options.confirmText || 'Confirm';
+        
+        // Theme colors
+        if (options.variant === 'danger') {
+            iconCont.className = 'w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6';
+            icon.className = 'w-8 h-8 text-red-500';
+            proceedBtn.className = 'flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all shadow-md bg-red-500 hover:bg-red-600';
+        } else {
+            iconCont.className = 'w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6';
+            icon.className = 'w-8 h-8 text-amber-500';
+            proceedBtn.className = 'flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all shadow-md bg-amber-500 hover:bg-amber-600';
+        }
+
+        confirmCallback = options.onConfirm || null;
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        confirmCallback = null;
+    }
+
+    document.getElementById('confirm-proceed-btn').addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        closeConfirmModal();
+    });
+
+    function confirmAction(e, options = {}) {
+        e.preventDefault();
+        const form = e.target.closest('form');
+        openConfirmModal({
+            ...options,
+            onConfirm: () => {
+                if (form) form.submit();
+            }
+        });
+    }
+
     let unreadCount = 0;
 
     function toggleNotifications() {

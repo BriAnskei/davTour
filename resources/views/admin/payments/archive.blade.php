@@ -54,18 +54,30 @@
                         <span class="font-display font-bold text-amber-400 text-sm">₱{{ number_format($payment->amount, 2) }}</span>
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">{{ ucfirst($payment->payment_status) }}</span>
+                        <span class="px-2.5 py-1 text-xs font-semibold text-gray-500">{{ ucfirst($payment->payment_status) }}</span>
                     </td>
                     <td class="px-6 py-4 text-gray-400 text-xs">{{ $payment->updated_at->format('M d, Y') }}</td>
                     <td class="px-6 py-4 text-right">
                         <div class="flex items-center justify-end gap-2">
-                            <form method="POST" action="{{ route('admin.payments.archive.toggle', $payment->id) }}">
+                            <form method="POST" action="{{ route('admin.payments.archive.toggle', $payment->id) }}"
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Restore Payment Record?',
+                                      description: 'Move this payment record back to the active list?',
+                                      confirmText: 'Yes, Restore',
+                                      variant: 'warning'
+                                  })">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-jungle-700 text-white hover:opacity-90 transition-colors shadow-sm">
                                     Restore
                                 </button>
                             </form>
-                            <form method="POST" action="{{ route('admin.payments.destroy', $payment->id) }}" onsubmit="return confirm('Permanently delete this payment record? This cannot be undone.')">
+                            <form method="POST" action="{{ route('admin.payments.destroy', $payment->id) }}"
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Permanently Delete Payment?',
+                                      description: 'Are you sure you want to delete this payment record? This action is permanent and cannot be undone.',
+                                      confirmText: 'Yes, Delete',
+                                      variant: 'danger'
+                                  })">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors" title="Delete Permanently">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>

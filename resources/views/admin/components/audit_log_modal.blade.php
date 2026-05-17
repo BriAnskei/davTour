@@ -71,14 +71,14 @@
                         details += '</div>';
                     }
 
-                    const actionColor = log.action === 'created' ? 'bg-green-100 text-green-600' : (log.action === 'deleted' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600');
+                    const actionColor = log.action === 'created' ? 'text-green-600' : (log.action === 'deleted' ? 'text-red-600' : 'text-blue-600');
 
                     html += `
                         <div class="relative pl-8 pb-2 border-l-2 border-slate2 last:border-0 last:pb-0">
-                            <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full border-4 border-white ${actionColor.split(' ')[0]} shadow-sm"></div>
+                            <div class="absolute -left-[11px] top-1 w-5 h-5 rounded-full border-4 border-white ${log.action === 'created' ? 'bg-green-500' : (log.action === 'deleted' ? 'bg-red-500' : 'bg-blue-500')} shadow-sm"></div>
                             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
                                 <div class="flex items-center gap-2">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${actionColor}">${log.action}</span>
+                                    <span class="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${actionColor}">${log.action}</span>
                                     <span class="font-bold text-jungle-700 text-sm">${log.auditable_name || 'Unnamed Record'}</span>
                                 </div>
                                 <span class="text-[10px] text-gray-400 font-medium">${date}</span>

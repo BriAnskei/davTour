@@ -22,6 +22,44 @@
         </a>
     </div>
 
+    {{-- Filters --}}
+    <form method="GET" action="{{ route('client.bookings') }}" class="mb-8 fade-up flex flex-wrap gap-4 items-end">
+        <input type="hidden" name="tab" value="{{ $tab }}">
+        
+        <div class="flex-1 min-w-[200px]">
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Search Tour</label>
+            <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="search" value="{{ request('search') }}" 
+                       placeholder="e.g. Samal Island"
+                       class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-100 text-sm focus:outline-none focus:border-jungle-500 bg-white shadow-sm">
+            </div>
+        </div>
+
+        <div class="w-full sm:w-48">
+            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Status</label>
+            <select name="status" class="w-full px-3 py-2.5 rounded-xl border border-gray-100 text-sm focus:outline-none focus:border-jungle-500 bg-white text-gray-600 shadow-sm">
+                <option value="">All Statuses</option>
+                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                <option value="awaiting_validation" {{ request('status') === 'awaiting_validation' ? 'selected' : '' }}>Awaiting Validation</option>
+                <option value="confirmed" {{ request('status') === 'confirmed' ? 'selected' : '' }}>Confirmed</option>
+                <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                <option value="rejected" {{ request('status') === 'rejected' ? 'selected' : '' }}>Rejected</option>
+            </select>
+        </div>
+
+        <div class="flex gap-2">
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-jungle-700 text-white text-sm font-bold hover:bg-jungle-800 transition-all shadow-md">
+                Filter
+            </button>
+            @if(request()->hasAny(['search', 'status']))
+                <a href="{{ route('client.bookings', ['tab' => $tab]) }}" class="px-4 py-2.5 rounded-xl border border-gray-100 text-gray-400 hover:bg-gray-50 transition-all text-sm font-bold flex items-center justify-center bg-white shadow-sm">
+                    Clear
+                </a>
+            @endif
+        </div>
+    </form>
+
     {{-- Flash Messages --}}
     @if(session('success'))
     <div class="mb-6 px-4 py-3 rounded-xl bg-jungle-50 border border-jungle-100 text-jungle-700 text-sm flex items-center gap-2 fade-up">
@@ -103,11 +141,11 @@
 
                     {{-- Status + Action --}}
                     <div class="flex flex-col items-end gap-3 shrink-0">
-                        <span class="px-3 py-1.5 rounded-full text-xs font-bold
-                            {{ $booking->status === 'confirmed'  ? 'bg-jungle-100 text-jungle-700'  :
-                               ($booking->status === 'pending'   ? 'bg-amber-100 text-amber-500'    :
-                               ($booking->status === 'awaiting_validation' ? 'bg-orange-100 text-orange-500' :
-                               'bg-red-100 text-red-500')) }}">
+                        <span class="px-3 py-1.5 text-xs font-bold
+                            {{ $booking->status === 'confirmed'  ? 'text-jungle-700'  :
+                               ($booking->status === 'pending'   ? 'text-amber-500'    :
+                               ($booking->status === 'awaiting_validation' ? 'text-orange-500' :
+                               'text-red-500')) }}">
                             {{ $booking->status === 'awaiting_validation' ? 'Awaiting Validation' : ucfirst($booking->status) }}
                         </span>
 
@@ -130,14 +168,36 @@
                             </form>
                             @endif
 
+                            {{-- Resubmit button (rejected only) --}}
+                            @if($booking->status === 'rejected')
+                            <form method="POST" action="{{ route('client.payment.resume', $booking->id) }}"
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Resubmit Booking?',
+                                      description: 'This will allow you to update your booking details and resubmit for approval.',
+                                      confirmText: 'Resubmit',
+                                      variant: 'warning'
+                                  })">
+                                @csrf
+                                <button type="submit"
+                                        class="px-4 py-2 rounded-xl text-xs font-bold text-white transition-all bg-red-600 hover:bg-red-700 hover:shadow-lg">
+                                    Resubmit Booking
+                                </button>
+                            </form>
+                            @endif
+
                             @if($booking->status === 'awaiting_validation')
                                 <p class="text-[10px] text-gray-400 italic">Admin is verifying your Senior ID...</p>
                             @endif
                             
                             {{-- Cancel button --}}
-                            @if(!in_array($booking->status, ['cancelled', 'confirmed', 'rejected']))
+                            @if($booking->status !== 'cancelled')
                             <form method="POST" action="{{ route('client.bookings.cancel', $booking->id) }}"
-                                  onsubmit="return confirm('Are you sure you want to cancel this booking?')">
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Cancel Booking?',
+                                      description: 'Are you sure you want to cancel your reservation for {{ $tour->name ?? 'this tour' }}? This action cannot be reversed.',
+                                      confirmText: 'Yes, Cancel',
+                                      variant: 'danger'
+                                  })">
                                 @csrf @method('PATCH')
                                 <button type="submit"
                                         class="text-xs text-red-400 hover:text-red-600 font-semibold transition-colors">

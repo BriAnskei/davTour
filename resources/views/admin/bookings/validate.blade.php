@@ -43,7 +43,13 @@
             <div class="bg-white rounded-2xl card-shine p-6 border border-slate2">
                 <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Validation Decision</h3>
                 
-                <form action="{{ route('admin.bookings.validate.post', $booking->id) }}" method="POST" class="space-y-4">
+                <form action="{{ route('admin.bookings.validate.post', $booking->id) }}" method="POST" class="space-y-4"
+                      onsubmit="confirmAction(event, {
+                          title: 'Submit Validation?',
+                          description: 'Are you sure you want to ' + (document.getElementById('approve-radio').checked ? 'approve' : 'reject') + ' this senior ID validation?',
+                          confirmText: 'Yes, Submit',
+                          variant: document.getElementById('approve-radio').checked ? 'warning' : 'danger'
+                      })">
                     @csrf
 
                     @if($errors->any())

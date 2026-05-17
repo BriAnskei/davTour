@@ -139,7 +139,7 @@
 
                     {{-- Persons --}}
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-jungle-50 text-jungle-700">
+                        <span class="px-2.5 py-1 text-xs font-bold text-jungle-700">
                             {{ $booking->p_count ?? '—' }} pax
                         </span>
                     </td>
@@ -153,10 +153,10 @@
 
                     {{-- Payment Status --}}
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold
-                            {{ $payment->payment_status === 'completed' ? 'bg-jungle-100 text-jungle-700'  :
-                               ($payment->payment_status === 'pending'   ? 'bg-amber-100 text-amber-500'   :
-                               'bg-red-100 text-red-500') }}">
+                        <span class="px-2.5 py-1 text-xs font-semibold
+                            {{ $payment->payment_status === 'completed' ? 'text-jungle-700'  :
+                               ($payment->payment_status === 'pending'   ? 'text-amber-500'   :
+                               'text-red-500') }}">
                             {{ ucfirst($payment->payment_status) }}
                         </span>
                     </td>
@@ -168,7 +168,13 @@
 
                     {{-- Actions --}}
                     <td class="px-6 py-4 text-right">
-                        <form method="POST" action="{{ route('admin.payments.archive.toggle', $payment->id) }}">
+                        <form method="POST" action="{{ route('admin.payments.archive.toggle', $payment->id) }}"
+                              onsubmit="confirmAction(event, {
+                                  title: 'Archive Payment?',
+                                  description: 'Are you sure you want to move this payment record to the archive?',
+                                  confirmText: 'Yes, Archive',
+                                  variant: 'warning'
+                              })">
                             @csrf @method('PATCH')
                             <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors" title="Archive Record">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>

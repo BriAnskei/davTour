@@ -64,7 +64,13 @@
                     <td class="px-6 py-4 text-gray-400 text-xs">{{ $sched->updated_at->format('M d, Y') }}</td>
                     <td class="px-6 py-4">
                         <div class="flex items-center justify-end">
-                            <form method="POST" action="{{ route('admin.tour_schedules.archive.toggle', $sched->id) }}">
+                            <form method="POST" action="{{ route('admin.tour_schedules.archive.toggle', $sched->id) }}"
+                                  onsubmit="confirmAction(event, {
+                                      title: 'Restore Schedule?',
+                                      description: 'Move this schedule back to the active list?',
+                                      confirmText: 'Yes, Restore',
+                                      variant: 'warning'
+                                  })">
                                 @csrf @method('PATCH')
                                 <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-jungle-700 text-white hover:opacity-90 transition-colors shadow-sm">
                                     Restore Schedule

@@ -58,7 +58,13 @@
                     <span class="text-xs text-gray-400 italic">Archived on {{ $tour->updated_at->format('M d, Y') }}</span>
                 </div>
                 <div class="flex items-center gap-1.5">
-                    <form method="POST" action="{{ route('admin.tours.archive.toggle', $tour->id) }}">
+                    <form method="POST" action="{{ route('admin.tours.archive.toggle', $tour->id) }}"
+                          onsubmit="confirmAction(event, {
+                              title: 'Restore Tour?',
+                              description: 'Move this tour record back to the active list?',
+                              confirmText: 'Yes, Restore',
+                              variant: 'warning'
+                          })">
                         @csrf @method('PATCH')
                         <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-jungle-700 text-white hover:opacity-90 transition-colors shadow-sm">
                             Restore Tour

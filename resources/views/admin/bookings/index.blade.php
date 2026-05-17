@@ -81,7 +81,7 @@
                         {{ isset($booking->tourSchedule->date) ? \Carbon\Carbon::parse($booking->tourSchedule->date)->format('M d, Y') : '—' }}
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-jungle-50 text-jungle-700">
+                        <span class="px-2 py-0.5 text-xs font-bold text-jungle-700">
                             {{ $booking->p_count }} pax
                         </span>
                         @if($booking->senior_count > 0)
@@ -106,11 +106,11 @@
                         @endif
                     </td>
                     <td class="px-6 py-4">
-                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold
-                            {{ $booking->status === 'confirmed' ? 'bg-jungle-100 text-jungle-700' :
-                               ($booking->status === 'pending'   ? 'bg-amber-100 text-amber-500' :
-                               ($booking->status === 'awaiting_validation' ? 'bg-orange-100 text-orange-600' :
-                               'bg-red-100 text-red-500')) }}">
+                        <span class="px-2.5 py-1 text-xs font-semibold
+                            {{ $booking->status === 'confirmed' ? 'text-jungle-700' :
+                               ($booking->status === 'pending'   ? 'text-amber-500' :
+                               ($booking->status === 'awaiting_validation' ? 'text-orange-600' :
+                               'text-red-500')) }}">
                             {{ $booking->status === 'awaiting_validation' ? 'Validation Required' : ucfirst($booking->status) }}
                         </span>
                         @if($booking->status === 'rejected' && $booking->rejection_reason)
@@ -132,7 +132,13 @@
 
                             {{-- Quick status update --}}
                             @if($booking->status === 'pending')
-                                <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}">
+                                <form method="POST" action="{{ route('admin.bookings.status', $booking->id) }}"
+                                      onsubmit="confirmAction(event, {
+                                          title: 'Cancel Booking?',
+                                          description: 'Are you sure you want to cancel this booking from {{ $booking->user->name ?? 'the guest' }}?',
+                                          confirmText: 'Yes, Cancel',
+                                          variant: 'danger'
+                                      })">
                                     @csrf @method('PATCH')
                                     <input type="hidden" name="status" value="cancelled">
                                     <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-400 hover:bg-red-100 transition-colors">
@@ -140,7 +146,13 @@
                                     </button>
                                 </form>
                             @elseif($booking->status === 'confirmed' || $booking->status === 'cancelled' || $booking->status === 'rejected' || ($booking->tourSchedule && \Carbon\Carbon::parse($booking->tourSchedule->date)->isPast()))
-                                <form method="POST" action="{{ route('admin.bookings.archive.toggle', $booking->id) }}">
+                                <form method="POST" action="{{ route('admin.bookings.archive.toggle', $booking->id) }}"
+                                      onsubmit="confirmAction(event, {
+                                          title: 'Archive Booking?',
+                                          description: 'Move this booking record to the archive?',
+                                          confirmText: 'Yes, Archive',
+                                          variant: 'warning'
+                                      })">
                                     @csrf @method('PATCH')
                                     <button type="submit" class="px-2 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors flex items-center gap-1">
                                         <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>

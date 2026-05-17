@@ -66,8 +66,8 @@
 
             {{-- Status badge --}}
             <div class="absolute top-3 right-3">
-                <span class="px-2.5 py-1 rounded-full text-xs font-bold
-                    {{ $tour->status === 'active' ? 'bg-green-500 text-white' : 'bg-gray-400 text-white' }}">
+                <span class="px-2.5 py-1 text-xs font-bold
+                    {{ $tour->status === 'active' ? 'text-green-500' : 'text-gray-400' }}">
                     {{ ucfirst($tour->status) }}
                 </span>
             </div>
@@ -102,7 +102,13 @@
                 </div>
                 <div class="flex items-center gap-1.5">
                     {{-- Archive --}}
-                    <form method="POST" action="{{ route('admin.tours.archive.toggle', $tour->id) }}">
+                    <form method="POST" action="{{ route('admin.tours.archive.toggle', $tour->id) }}"
+                          onsubmit="confirmAction(event, {
+                              title: 'Archive Tour?',
+                              description: 'Are you sure you want to move this tour to the archive?',
+                              confirmText: 'Yes, Archive',
+                              variant: 'warning'
+                          })">
                         @csrf @method('PATCH')
                         <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-amber-500 hover:bg-amber-50 transition-colors" title="Archive">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
@@ -124,7 +130,13 @@
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </a>
                     {{-- Toggle Status --}}
-                    <form method="POST" action="{{ route('admin.tours.toggle', $tour->id) }}">
+                    <form method="POST" action="{{ route('admin.tours.toggle', $tour->id) }}"
+                          onsubmit="confirmAction(event, {
+                              title: 'Change Tour Status?',
+                              description: 'Are you sure you want to {{ $tour->status === 'active' ? 'deactivate' : 'activate' }} this tour?',
+                              confirmText: 'Yes, Change',
+                              variant: 'warning'
+                          })">
                         @csrf @method('PATCH')
                         <button type="submit"
                                 class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors {{ $tour->status === 'active' ? 'text-orange-400 hover:bg-orange-50' : 'text-green-400 hover:bg-green-50' }}"
@@ -134,7 +146,12 @@
                     </form>
                     {{-- Delete --}}
                     <form method="POST" action="{{ route('admin.tours.destroy', $tour->id) }}"
-                          onsubmit="return confirm('Delete this tour and all its images? This cannot be undone.')">
+                          onsubmit="confirmAction(event, {
+                              title: 'Permanently Delete Tour?',
+                              description: 'Are you sure you want to delete this tour and all its images? This cannot be undone.',
+                              confirmText: 'Yes, Delete',
+                              variant: 'danger'
+                          })">
                         @csrf @method('DELETE')
                         <button type="submit" class="w-8 h-8 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-50 transition-colors" title="Delete">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
