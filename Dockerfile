@@ -53,7 +53,8 @@ COPY . /var/www/html
 
 
 # Copy SSL certificate for Aiven database
-COPY certs/ca.pem /etc/ssl/certs/aiven-ca.pem
+COPY certs/ca.pem /usr/local/share/ca-certificates/aiven.crt
+RUN update-ca-certificates
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
