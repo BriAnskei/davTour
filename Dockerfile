@@ -30,6 +30,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Configure PHP-FPM
 RUN sed -i 's/listen = \/run\/php\/php8.3-fpm.sock/listen = 9000/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+RUN echo "clear_env = no" >> /usr/local/etc/php-fpm.d/www.conf
 
 # Configure Nginx
 RUN echo 'server {\n\
@@ -80,12 +81,6 @@ RUN echo '#!/bin/bash' > /start.sh && \
     echo 'echo "=== Starting Laravel on Render ==="' >> /start.sh && \
     echo 'echo "Environment: ${APP_ENV:-production}"' >> /start.sh && \
     echo 'echo "App URL: ${APP_URL}"' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'if [ ! -f .env ] && [ -f .env.example ]; then' >> /start.sh && \
-    echo '    cp .env.example .env' >> /start.sh && \
-    echo 'elif [ ! -f .env ]; then' >> /start.sh && \
-    echo '    touch .env' >> /start.sh && \
-    echo 'fi' >> /start.sh && \
     echo '' >> /start.sh && \
     echo 'echo "Generating app key..."' >> /start.sh && \
     echo 'php artisan key:generate --force' >> /start.sh && \
