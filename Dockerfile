@@ -29,7 +29,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 
 # Configure PHP-FPM
-RUN sed -i 's/listen = \/run\/php\/php8.3-fpm.sock/listen = 9000/' /usr/local/etc/php-fpm.d/www.conf 2>/dev/null || true
+RUN sed -i 's/listen = .*/listen = 9000/' /usr/local/etc/php-fpm.d/www.conf
 RUN echo "clear_env = no" >> /usr/local/etc/php-fpm.d/www.conf
 
 # Configure Nginx
@@ -52,15 +52,16 @@ RUN echo 'server {\n\
 WORKDIR /var/www/html
 COPY . /var/www/html
 
-
 # Copy SSL certificate for Aiven database
 COPY certs/ca.pem /usr/local/share/ca-certificates/aiven.crt
 RUN update-ca-certificates
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage \
-    && chmod -R 755 /var/www/html/bootstrap/cache
+    && find /var/www/html/storage -type d -exec chmod 775 {} \; \
+    && find /var/www/html/storage -type f -exec chmod 664 {} \; \
+    && find /var/www/html/bootstrap/cache -type d -exec chmod 775 {} \; \
+    && find /var/www/html/bootstrap/cache -type f -exec chmod 664 {} \;
 
 # Install composer dependencies
 RUN composer install --no-interaction --optimize-autoloader --no-dev
@@ -82,14 +83,15 @@ RUN echo '#!/bin/bash' > /start.sh && \
     echo 'echo "Environment: ${APP_ENV:-production}"' >> /start.sh && \
     echo 'echo "App URL: ${APP_URL}"' >> /start.sh && \
     echo '' >> /start.sh && \
-    echo 'echo "Generating app key..."' >> /start.sh && \
-    echo 'php artisan key:generate --force' >> /start.sh && \
-    echo '' >> /start.sh && \
     echo 'echo "Running migrations..."' >> /start.sh && \
     echo 'php artisan migrate --force' >> /start.sh && \
     echo '' >> /start.sh && \
     echo 'echo "Creating storage link..."' >> /start.sh && \
     echo 'php artisan storage:link' >> /start.sh && \
+    echo '' >> /start.sh && \
+    echo 'echo "Setting final permissions..."' >> /start.sh && \
+    echo 'chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache' >> /start.sh && \
+    echo 'chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache' >> /start.sh && \
     echo '' >> /start.sh && \
     echo 'echo "Optimizing..."' >> /start.sh && \
     echo 'php artisan optimize:clear' >> /start.sh && \
@@ -97,23 +99,8 @@ RUN echo '#!/bin/bash' > /start.sh && \
     echo 'php artisan route:cache' >> /start.sh && \
     echo 'php artisan view:cache' >> /start.sh && \
     echo '' >> /start.sh && \
-    echo 'echo "Testing PHP-FPM config..."' >> /start.sh && \
-    echo 'php-fpm -t' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'echo "Testing Nginx config..."' >> /start.sh && \
-    echo 'nginx -t' >> /start.sh && \
-    echo '' >> /start.sh && \
     echo 'echo "Starting PHP-FPM..."' >> /start.sh && \
     echo 'php-fpm -D' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'sleep 2' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'if pgrep php-fpm > /dev/null; then' >> /start.sh && \
-    echo '    echo "PHP-FPM started successfully"' >> /start.sh && \
-    echo 'else' >> /start.sh && \
-    echo '    echo "ERROR: PHP-FPM failed to start"' >> /start.sh && \
-    echo '    exit 1' >> /start.sh && \
-    echo 'fi' >> /start.sh && \
     echo '' >> /start.sh && \
     echo 'echo "Starting Nginx..."' >> /start.sh && \
     echo 'nginx -g "daemon off;"' >> /start.sh
