@@ -49,6 +49,7 @@ RUN echo 'server {\n\
     server_name _;\n\
     root /var/www/html/public;\n\
     index index.php;\n\
+    client_max_body_size 64M;\n\
     location / {\n\
         try_files $uri $uri/ /index.php?$query_string;\n\
     }\n\
@@ -58,6 +59,9 @@ RUN echo 'server {\n\
         include fastcgi_params;\n\
     }\n\
 }' > /etc/nginx/sites-enabled/default
+
+# Configure PHP for larger uploads
+RUN echo "upload_max_filesize=64M\npost_max_size=64M" > /usr/local/etc/php/conf.d/uploads.ini
 
 # Copy SSL certificate for Aiven database
 COPY certs/ca.pem /usr/local/share/ca-certificates/aiven.crt
